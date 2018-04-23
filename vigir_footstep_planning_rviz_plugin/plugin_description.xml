@@ -1,0 +1,17 @@
+<library path="lib/libvigir_footstep_planning_rviz_plugin">
+  <class name="footstep_planning_rviz_plugin/StepPlan"
+         type="vigir_footstep_planning_rviz_plugin::StepPlanDisplay"
+         base_class_type="rviz::Display">
+    <description>
+      Create and display Step Plans. 
+    </description>
+    <message_type>vigir_footstep_planning_msgs/StepPlan</message_type>
+  </class>
+  <class name="footstep_planning_rviz_plugin/PlantFeet"
+         type="vigir_footstep_planning_rviz_plugin::PlantFeetTool"
+         base_class_type="rviz::Tool">
+    <description>
+      Position a pair of feet on the ground plane.
+    </description>
+  </class>
+</library>
