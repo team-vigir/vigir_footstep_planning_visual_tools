@@ -1,6 +1,8 @@
 #ifndef PLANT_FEET_TOOL_H
 #define PLANT_FEET_TOOL_H
 
+#ifndef Q_MOC_RUN
+
 #include <rviz/tool.h>
 #include <QKeyEvent>
 #include <QObject>
@@ -8,6 +10,9 @@
 
 #include <vigir_footstep_planning_rviz_plugin/foot_visual.h>
 #include <interactive_markers/menu_handler.h>
+
+#endif
+
 namespace Ogre
 {
 class SceneNode;

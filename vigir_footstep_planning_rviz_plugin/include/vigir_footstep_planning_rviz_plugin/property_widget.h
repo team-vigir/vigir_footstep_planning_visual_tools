@@ -1,8 +1,12 @@
 #ifndef PROPERTY_WIDGET_H
 #define PROPERTY_WIDGET_H
 
+#ifndef Q_MOC_RUN
+
 #include <qtreewidget.h>
 #include <vigir_footstep_planning_msgs/footstep_planning_msgs.h>
+
+#endif
 
 namespace vigir_footstep_planning_rviz_plugin
 {

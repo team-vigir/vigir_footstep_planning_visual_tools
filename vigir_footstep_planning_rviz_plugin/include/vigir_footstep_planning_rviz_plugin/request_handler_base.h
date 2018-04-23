@@ -1,6 +1,8 @@
 #ifndef REQUEST_HANDLER_BASE_H
 #define REQUEST_HANDLER_BASE_H
 
+#ifndef Q_MOC_RUN
+
 #include <vigir_footstep_planning_msgs/footstep_planning_msgs.h>
 #include <QObject>
 
@@ -9,6 +11,8 @@
 
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/client/terminal_state.h>
+
+#endif
 
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::StepPlanRequestAction> StepPlanRequestActionClient;
 typedef vigir_footstep_planning_msgs::StepPlanRequestResultConstPtr RequestResult;

@@ -1,12 +1,15 @@
 #ifndef STEP_PLAN_HELPER_H
 #define STEP_PLAN_HELPER_H
 
+#ifndef Q_MOC_RUN
+
 #include <vigir_footstep_planning_msgs/footstep_planning_msgs.h>
 #include <actionlib/client/simple_action_client.h>
 #include <OgreVector3.h>
 #include <OgreQuaternion.h>
 #include <QObject>
 
+#endif
 
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::EditStepAction> EditStepActionClient;
 

@@ -1,8 +1,8 @@
-
 #ifndef STEP_PLAN_DISPLAY_H
 #define STEP_PLAN_DISPLAY_H
 
 #ifndef Q_MOC_RUN
+
 #include <boost/circular_buffer.hpp>
 #include <rviz/display.h>
 

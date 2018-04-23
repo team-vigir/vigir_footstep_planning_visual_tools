@@ -1,6 +1,8 @@
 #ifndef STEP_VISUAL_H
 #define STEP_VISUAL_H
 
+#ifndef Q_MOC_RUN
+
 #include <vigir_footstep_planning_msgs/footstep_planning_msgs.h>
 #include <rviz/ogre_helpers/stl_loader.h>
 #include <QObject>
@@ -8,6 +10,8 @@
 #include <visualization_msgs/InteractiveMarker.h>
 #include <visualization_msgs/InteractiveMarkerControl.h>
 #include <interactive_markers/menu_handler.h>
+
+#endif
 
 typedef visualization_msgs::InteractiveMarkerFeedbackConstPtr FeedbackConstPtr;
 typedef vigir_footstep_planning_msgs::Foot FootMsg;
