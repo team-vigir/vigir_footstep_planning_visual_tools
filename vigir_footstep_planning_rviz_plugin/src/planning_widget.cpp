@@ -85,11 +85,6 @@ void PlanningWidget::abort()
 
 // ========== UI Slots =================================================================
 
-void PlanningWidget::on_planningExecuteCommandLinkButton_clicked()
-{
-  ROS_INFO("PlanningWidget::on_planningExecuteCommandLinkButton_clicked() not yet implemented");
-}
-
 void PlanningWidget::on_planningComputeCommandLinkButton_clicked()
 {
   request_handler_->setPlanningMode(ui->planningModeComboBox->currentIndex());

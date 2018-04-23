@@ -65,7 +65,7 @@ StepPlanDisplay::StepPlanDisplay()
 
 void StepPlanDisplay::onInitialize()
 {
-  setIcon(QIcon("./vigir/vigir_footstep_planning/vigir_footstep_planning_basics/vigir_footstep_planning_rviz_plugin/media/bothFeet.png"));
+  setIcon(QIcon("./vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/bothFeet.png"));
   step_visuals_.rset_capacity(100);
   start_visuals_.rset_capacity(2);
   panel_= new FootstepPlanningPanel();
@@ -116,6 +116,8 @@ void StepPlanDisplay::onInitialize()
   connect(this, SIGNAL(requestStartPose()), panel_, SLOT(startPoseRequested()));
   connect(panel_, SIGNAL(startFeetAnswer(vigir_footstep_planning_msgs::Feet)), this, SLOT(addStartFeet(vigir_footstep_planning_msgs::Feet)));
   connect(panel_, SIGNAL(interactionModeChanged(int)), this, SLOT(setInteractionMode(int)));
+
+  connect(panel_, SIGNAL(executeRequested()), step_plan_helper_, SLOT(executeStepPlan()));
 
   //Solve duplicate FootTool Problem:
   connect(tool_manager_, SIGNAL(toolAdded(Tool*)), this, SLOT(checkTool(Tool*)));

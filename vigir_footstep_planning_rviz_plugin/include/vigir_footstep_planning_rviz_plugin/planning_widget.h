@@ -29,7 +29,6 @@ public:
     void setFrameID(const QString frame_id);
 
 private Q_SLOTS:
-    void on_planningExecuteCommandLinkButton_clicked();
     void on_planningComputeCommandLinkButton_clicked();
 public Q_SLOTS:
 // invoked from Display

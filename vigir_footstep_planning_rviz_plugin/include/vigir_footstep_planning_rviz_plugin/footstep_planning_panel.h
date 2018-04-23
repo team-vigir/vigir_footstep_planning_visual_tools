@@ -79,6 +79,7 @@ Q_SIGNALS:
   void undo();
   void acceptModifiedStepPlan();
   void interactionModeChanged(int interaction_mode);
+  void executeRequested();
   // pass through of RequestHandlerBase signals (PlanningRequestHandler + PatternRequestHandler)
   void createdStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan);
   void startFeetAnswer(vigir_footstep_planning_msgs::Feet start);

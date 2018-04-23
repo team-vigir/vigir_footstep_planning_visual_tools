@@ -14,13 +14,13 @@ FootstepPlanningPanel::FootstepPlanningPanel( QWidget* parent )
   ui_->setupUi(this);
   // set icons:
 // path relative to runtime directory
-  QIcon icon_left("./vigir/vigir_footstep_planning/vigir_footstep_planning_basics/vigir_footstep_planning_rviz_plugin/media/footLeft.png");
+  QIcon icon_left("./vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/footLeft.png");
   if(!icon_left.isNull())
     ui_->leftFootToolButton->setIcon(icon_left);
-  QIcon icon_right("./vigir/vigir_footstep_planning/vigir_footstep_planning_basics/vigir_footstep_planning_rviz_plugin/media/footRight.png");
+  QIcon icon_right("./vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/footRight.png");
   if(!icon_right.isNull())
     ui_->rightFootToolButton->setIcon(icon_right);
-  QIcon icon_both("./vigir/vigir_footstep_planning/vigir_footstep_planning_basics/vigir_footstep_planning_rviz_plugin/media/bothFeet.png");
+  QIcon icon_both("./vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/bothFeet.png");
   if(!icon_both.isNull())
     ui_->bothFeetToolButton->setIcon(icon_both);
 
@@ -40,6 +40,8 @@ FootstepPlanningPanel::FootstepPlanningPanel( QWidget* parent )
 
   connect(ui_->undoPushButton, SIGNAL(clicked()), this, SIGNAL(undo()));
   connect(ui_->acceptPushButton, SIGNAL(clicked()), this, SIGNAL(acceptModifiedStepPlan()));
+
+  connect(ui_->executePushButton, SIGNAL(clicked()), this, SIGNAL(executeRequested()));
 }
 
 

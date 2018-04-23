@@ -9,6 +9,7 @@ namespace vigir_footstep_planning_rviz_plugin
 StepPlanHelper::StepPlanHelper(QObject *parent)
   : QObject( parent )
   , edit_step_ac("/vigir/footstep_planning/edit_step", true)
+  , execute_step_plan_ac("/vigir/footstep_planning/execute_step_plan", true)
   , fixed_frame_("")
   , step_edited(false)
 {
@@ -36,12 +37,14 @@ void StepPlanHelper::connectToActionServer()
 {
 
   if(edit_step_ac.waitForServer(ros::Duration(1,0)))
-  {
     ROS_INFO("Connected to Action Server (/vigir/footstep_planning/edit_step)");
-    return;
-  }
-  ROS_INFO("Could not connect to Action Server (/vigir/footstep_planning/edit_step)");
-  return;
+  else
+    ROS_INFO("Could not connect to Action Server (/vigir/footstep_planning/edit_step)");
+
+  if(execute_step_plan_ac.waitForServer(ros::Duration(1,0)))
+    ROS_INFO("Connected to Action Server (/vigir/footstep_planning/execute_step_plan)");
+  else
+    ROS_INFO("Could not connect to Action Server (/vigir/footstep_planning/execute_step_plan)");
 }
 
 bool StepPlanHelper::checkConnection()
@@ -92,7 +95,7 @@ void StepPlanHelper::checkSteps()
     StepMsg step = current_step_plan.steps[i];
     if(!step.valid || step.colliding)
     {
-//      ROS_ERROR("%i", i);
+      //      ROS_ERROR("%i", i);
       Q_EMIT(stepValidUpdate(step.step_index, false));
       if(step.colliding)
         ROS_INFO("colliding");
@@ -200,6 +203,26 @@ void StepPlanHelper::acceptModifiedStepPlan()
   step_edited=false;
   Q_EMIT(createdStepPlan(current_step_plan));
 }
+
+void StepPlanHelper::executeStepPlan()
+{
+  if(execute_step_plan_ac.isServerConnected())
+  {
+    vigir_footstep_planning_msgs::ExecuteStepPlanGoal goal;
+    goal.step_plan = current_step_plan;
+    execute_step_plan_ac.sendGoal(goal,
+                          boost::bind(&StepPlanHelper::executeStepPlanCallback, this, _1, _2),
+                          ExecuteStepPlanActionClient::SimpleActiveCallback(),
+                          ExecuteStepPlanActionClient::SimpleFeedbackCallback());
+  }
+  else
+    ROS_WARN("execute_step_plan not available! Please activate an \"/vigir/footstep_planning/execute_step_plan\" action server.");
+}
+
+void StepPlanHelper::executeStepPlanCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::ExecuteStepPlanResultConstPtr& result)
+{
+}
+
 
 } // end namespace vigir_footstep_planning_rviz_plugin
 

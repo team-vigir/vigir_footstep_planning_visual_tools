@@ -12,6 +12,7 @@
 #endif
 
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::EditStepAction> EditStepActionClient;
+typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::ExecuteStepPlanAction> ExecuteStepPlanActionClient;
 
 typedef vigir_footstep_planning_msgs::ErrorStatus ErrorStatusMsg;
 typedef vigir_footstep_planning_msgs::StepPlan StepPlanMsg;
@@ -38,6 +39,7 @@ public:
   void addStep(const std::string& frame_id, const Ogre::Vector3& position, const Ogre::Quaternion& orientation, unsigned int which_foot, unsigned int step_index);
 public Q_SLOTS:
   void editStep(vigir_footstep_planning_msgs::EditStep edit_step);
+  void executeStepPlan();
   void setCurrentStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan);
   void updateFoot(vigir_footstep_planning_msgs::Foot foot, unsigned int step_index);
   void setRobotPose(Ogre::Vector3 position, Ogre::Quaternion orientation);
@@ -51,6 +53,7 @@ Q_SIGNALS:
 private:
   void connectToActionServer();
   void editStepCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::EditStepResultConstPtr& result);
+  void executeStepPlanCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::ExecuteStepPlanResultConstPtr& result);
   void checkSteps();
   void combineStepPlans(std::vector<StepPlanMsg>& step_plans);
   bool checkForErrors(ErrorStatusMsg error_status);
@@ -61,6 +64,7 @@ private:
   ros::NodeHandle nh;
   ros::Publisher robot_pose_publisher;
   EditStepActionClient edit_step_ac;
+  ExecuteStepPlanActionClient execute_step_plan_ac;
   std::string fixed_frame_;
 
   bool step_edited; //true when current_step_plan is different to back() of previous_step_plans
