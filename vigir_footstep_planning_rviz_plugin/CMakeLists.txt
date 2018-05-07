@@ -17,9 +17,12 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## System dependencies are found with CMake's conventions
-find_package(Qt4 COMPONENTS QtCore QtGui REQUIRED)
-include(${QT_USE_FILE})
+#find_package(Qt4 COMPONENTS QtCore QtGui REQUIRED)
+#include(${QT_USE_FILE})
 
+find_package(Qt5 ${rviz_QT_VERSION} EXACT REQUIRED Core Widgets)
+
+set(QT_LIBRARIES Qt5::Widgets)
 ## I prefer the Qt signals and slots to avoid defining "emit", "slots",
 ## etc because they can conflict with boost signals, so define QT_NO_KEYWORDS here.
 add_definitions(-DQT_NO_KEYWORDS)
@@ -131,13 +134,13 @@ include_directories(
 
 ## Here we specify which header files need to be run through "moc",
 ## Qt's meta-object compiler.
-qt4_wrap_ui(UIS_HDRS ui_forms/paneldesign.ui)
-qt4_wrap_ui(UIS_HDRS ui_forms/pattern_planning.ui)
-qt4_wrap_ui(UIS_HDRS ui_forms/planning_widget.ui)
-qt4_wrap_ui(UIS_HDRS ui_forms/simple_pattern.ui)
+qt5_wrap_ui(UIS_HDRS ui_forms/paneldesign.ui)
+qt5_wrap_ui(UIS_HDRS ui_forms/pattern_planning.ui)
+qt5_wrap_ui(UIS_HDRS ui_forms/planning_widget.ui)
+qt5_wrap_ui(UIS_HDRS ui_forms/simple_pattern.ui)
 
 
-qt4_wrap_cpp(MOC_FILES
+qt5_wrap_cpp(MOC_FILES
   include/${PROJECT_NAME}/step_plan_display.h
   include/${PROJECT_NAME}/plant_feet_tool.h
   include/${PROJECT_NAME}/footstep_planning_panel.h

@@ -118,7 +118,6 @@ void PlanningRequestHandler::setReplanGoalCallback(const actionlib::SimpleClient
   {
     // set replan goal and replan
     request_->goal = result->feet;
-    ROS_INFO("set replan goal");
 
     // replan
     if(last_step_index > replan_goal_index)

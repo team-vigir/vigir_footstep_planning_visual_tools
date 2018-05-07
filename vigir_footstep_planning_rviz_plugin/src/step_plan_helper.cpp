@@ -1,4 +1,4 @@
-#include <vigir_footstep_planning_rviz_plugin/step_plan_helper.h>
+#include "../include/vigir_footstep_planning_rviz_plugin/step_plan_helper.h"
 #include <vigir_footstep_planning_msgs/step_plan.h>
 #include <OgreVector3.h>
 #include <OgreQuaternion.h>
@@ -8,7 +8,7 @@ namespace vigir_footstep_planning_rviz_plugin
 
 StepPlanHelper::StepPlanHelper(QObject *parent)
   : QObject( parent )
-  , edit_step_ac("/vigir/footstep_planning/edit_step", true)
+//  , edit_step_ac("/vigir/footstep_planning/edit_step", true)
   , execute_step_plan_ac("/vigir/footstep_planning/execute_step_plan", true)
   , fixed_frame_("")
   , step_edited(false)
@@ -36,11 +36,11 @@ void StepPlanHelper::setCurrentStepPlan(StepPlanMsg step_plan)
 void StepPlanHelper::connectToActionServer()
 {
 
-  if(edit_step_ac.waitForServer(ros::Duration(1,0)))
+/*  if(edit_step_ac.waitForServer(ros::Duration(1,0)))
     ROS_INFO("Connected to Action Server (/vigir/footstep_planning/edit_step)");
   else
     ROS_INFO("Could not connect to Action Server (/vigir/footstep_planning/edit_step)");
-
+*/
   if(execute_step_plan_ac.waitForServer(ros::Duration(1,0)))
     ROS_INFO("Connected to Action Server (/vigir/footstep_planning/execute_step_plan)");
   else
@@ -49,14 +49,14 @@ void StepPlanHelper::connectToActionServer()
 
 bool StepPlanHelper::checkConnection()
 {
-  return edit_step_ac.isServerConnected();
+  //return edit_step_ac.isServerConnected();
 }
 
 // Edit Step Update Foot
 
 void StepPlanHelper::editStep(vigir_footstep_planning_msgs::EditStep edit_step)
 {
-  if(edit_step_ac.isServerConnected())
+/*  if(edit_step_ac.isServerConnected())
   {
     vigir_footstep_planning_msgs::EditStepGoal goal;
     goal.step_plan = current_step_plan;
@@ -68,6 +68,7 @@ void StepPlanHelper::editStep(vigir_footstep_planning_msgs::EditStep edit_step)
   }
   else
     ROS_WARN("edit_step not available! Please activate an \"/vigir/footstep_planning/edit_step\" action server.");
+*/
 }
 
 void StepPlanHelper::editStepCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::EditStepResultConstPtr& result)
@@ -206,6 +207,7 @@ void StepPlanHelper::acceptModifiedStepPlan()
 
 void StepPlanHelper::executeStepPlan()
 {
+  /*
   if(execute_step_plan_ac.isServerConnected())
   {
     vigir_footstep_planning_msgs::ExecuteStepPlanGoal goal;
@@ -217,6 +219,7 @@ void StepPlanHelper::executeStepPlan()
   }
   else
     ROS_WARN("execute_step_plan not available! Please activate an \"/vigir/footstep_planning/execute_step_plan\" action server.");
+*/
 }
 
 void StepPlanHelper::executeStepPlanCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::ExecuteStepPlanResultConstPtr& result)

@@ -264,7 +264,6 @@ void PlantFeetTool::processMenuFeedback(const visualization_msgs::InteractiveMar
   switch (handle)
   {
   case 1: // 6 DOF interaction
-    ROS_INFO("6 Dof interaction");
     if(state == MenuHandler::UNCHECKED)
     {
       menu_handler.setCheckState(handle, MenuHandler::CHECKED);

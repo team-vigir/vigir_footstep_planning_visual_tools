@@ -26,12 +26,11 @@
 namespace vigir_footstep_planning_rviz_plugin
 {
 StepPlanDisplay::StepPlanDisplay()
-  : step_plan_helper_(new StepPlanHelper())
-  , displayFeedback(false)
-  , interaction_mode_(PLANE)
-  , last_step_index(0)
 {
-
+  step_plan_helper_ = new StepPlanHelper();
+  displayFeedback = false;
+  interaction_mode_ = PLANE;
+  last_step_index = 0;
   qRegisterMetaType<vigir_footstep_planning_msgs::Step>("vigir_footstep_planning_msgs::Step");
 
   frame_id_property_ = new rviz::StringProperty( "Frame ID", "",
@@ -68,6 +67,7 @@ void StepPlanDisplay::onInitialize()
   setIcon(QIcon("./vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/bothFeet.png"));
   step_visuals_.rset_capacity(100);
   start_visuals_.rset_capacity(2);
+
   panel_= new FootstepPlanningPanel();
   tool_manager_ = context_->getToolManager();
 
@@ -88,6 +88,7 @@ void StepPlanDisplay::onInitialize()
   interactive_marker_display_->setEnabled(connected_edit_step);
 
   this->setAssociatedWidget (panel_);
+
   // on step plan created
   connect( panel_, SIGNAL( createdStepPlan( vigir_footstep_planning_msgs::StepPlan ) ), this, SLOT( displayStepPlan( vigir_footstep_planning_msgs::StepPlan ) ));
   connect( panel_ , SIGNAL( createdStepPlan( vigir_footstep_planning_msgs::StepPlan ) ), step_plan_helper_, SLOT( setCurrentStepPlan( vigir_footstep_planning_msgs::StepPlan ) ));
@@ -121,6 +122,7 @@ void StepPlanDisplay::onInitialize()
 
   //Solve duplicate FootTool Problem:
   connect(tool_manager_, SIGNAL(toolAdded(Tool*)), this, SLOT(checkTool(Tool*)));
+
 }
 
 void StepPlanDisplay::update(float wall_dt, float ros_dt)
