@@ -1,4 +1,4 @@
-se#include <vigir_footstep_planning_rviz_plugin/request_handler_base.h>
+#include <vigir_footstep_planning_rviz_plugin/request_handler_base.h>
 #include <QMetaType>
 #include <vigir_footstep_planning_msgs/step_plan.h>
 
