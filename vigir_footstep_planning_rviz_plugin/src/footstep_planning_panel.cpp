@@ -24,7 +24,7 @@ FootstepPlanningPanel::FootstepPlanningPanel( QWidget* parent )
   if(!icon_both.isNull())
     ui_->bothFeetToolButton->setIcon(icon_both);
 
-  ui_->moreOptionsGroupBox->setChecked(false);
+  //ui_->moreOptionsGroupBox->setChecked(false);
   ui_->patternWidget->ui->sequenceCheckBox->setVisible(false);
   ui_->planningWidget->ui->sequenceCheckBox->setVisible(false);
 

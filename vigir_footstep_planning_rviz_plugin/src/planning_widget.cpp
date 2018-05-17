@@ -14,6 +14,8 @@ PlanningWidget::PlanningWidget(QWidget *parent) :
 
     // ui signals
     connect(ui->planningSetGoalToolButton, SIGNAL(toggled(bool)), this, SLOT(emitFeetToolActivated(bool)));
+    connect(ui->startFootComboBox, SIGNAL(currentIndexChanged(int)), request_handler_, SLOT(setStartFoot(int)));
+
 }
 
 PlanningWidget::~PlanningWidget()
@@ -97,5 +99,22 @@ void PlanningWidget::emitFeetToolActivated(bool activated)
 {
   Q_EMIT(feetToolActivated(activated));
 }
+
+void PlanningWidget::on_maxTimeDoubleSpinBox_valueChanged(double arg1)
+{
+
+}
+
+void PlanningWidget::on_maxNofStepsDoubleSpinBox_valueChanged(double arg1)
+{
+
+}
+
+void PlanningWidget::on_ratioDoubleSpinBox_valueChanged(double arg1)
+{
+
+}
+
+
 
 }// End namespace vigir_footstep_planning_rviz_plugin

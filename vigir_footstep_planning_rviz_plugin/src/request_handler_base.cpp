@@ -1,4 +1,4 @@
-#include <vigir_footstep_planning_rviz_plugin/request_handler_base.h>
+se#include <vigir_footstep_planning_rviz_plugin/request_handler_base.h>
 #include <QMetaType>
 #include <vigir_footstep_planning_msgs/step_plan.h>
 
@@ -8,8 +8,8 @@ namespace vigir_footstep_planning_rviz_plugin
 
 RequestHandlerBase::RequestHandlerBase(QObject* parent)
   : QObject( parent )
-  , ac("/vigir/footstep_planning/step_plan_request", true)
-  , generate_feet_ac("/vigir/footstep_planning/generate_feet_pose", true)
+  , ac("/johnny5/footstep_planning/step_plan_request", true)
+  , generate_feet_ac("/johnny5/footstep_planning/generate_feet_pose", true)
   , last_step_index(0)
   , replan_goal_index(0)
 {
@@ -115,14 +115,14 @@ void RequestHandlerBase::connectToActionServer()
   bool connected = ac.waitForServer(ros::Duration(1,0));
   if(!connected)
   {
-    ROS_INFO("Could not connect to Action Server. (/vigir/footstep_planning/step_plan_request)");
+    ROS_INFO("Could not connect to Action Server. (/johnny5/footstep_planning/step_plan_request)");
   }
   else
   {
-    ROS_INFO("Connected to Action Server. (/vigir/footstep_planning/step_plan_request)");
+    ROS_INFO("Connected to Action Server. (/johnny5/footstep_planning/step_plan_request)");
     connected = generate_feet_ac.waitForServer(ros::Duration(1,0));
     if(!connected) ROS_WARN("Could not connect to Action Server (/vigir_footstep_planning/generate_feet_pose");
-    else ROS_INFO("Connected to Action Server. (/vigir/footstep_planning/generate_feet_pose");
+    else ROS_INFO("Connected to Action Server. (/johnny5/footstep_planning/generate_feet_pose");
   }
 }
 
@@ -187,7 +187,7 @@ void RequestHandlerBase::setCurrentGoal(int last_index)
 {
   if(current_step_plan.steps.size() <= last_index)
   {
-    ROS_ERROR("Last index %i invalid, maximum %i is allowed", last_index, current_step_plan.steps.size());
+    ROS_ERROR("Last index %i invalid, maximum %i is allowed", last_index, (int)current_step_plan.steps.size());
     return;
   }
   last_step_index = last_index;

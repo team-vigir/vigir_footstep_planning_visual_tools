@@ -30,6 +30,10 @@ public:
 
 private Q_SLOTS:
     void on_planningComputeCommandLinkButton_clicked();
+    void on_maxTimeDoubleSpinBox_valueChanged(double arg1);
+    void on_maxNofStepsDoubleSpinBox_valueChanged(double arg1);
+    void on_ratioDoubleSpinBox_valueChanged(double arg1);
+
 public Q_SLOTS:
 // invoked from Display
     void setCurrentStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan); // update step plan if computed in other request handler

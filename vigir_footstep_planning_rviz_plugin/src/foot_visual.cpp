@@ -82,7 +82,7 @@ void StepVisual::createVisualAt(const Ogre::Vector3& position, const Ogre::Quate
 
 void StepVisual::createVisualAt(const geometry_msgs::Point& foot_position, const geometry_msgs::Quaternion& foot_orientation)
 {
-  Ogre::Vector3	p(foot_position.x, foot_position.y, foot_position.z-0.085); //0.85 z-value in step_plan message of all feet.
+  Ogre::Vector3	p(foot_position.x, foot_position.y, foot_position.z/*-0.085*/); //0.85 z-value in step_plan message of all feet.
   Ogre::Quaternion o(foot_orientation.w, foot_orientation.x, foot_orientation.y, foot_orientation.z);
 
   createVisualAt(p, o);

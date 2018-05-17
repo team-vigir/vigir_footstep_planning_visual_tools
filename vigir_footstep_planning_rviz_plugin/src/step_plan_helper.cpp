@@ -8,8 +8,8 @@ namespace vigir_footstep_planning_rviz_plugin
 
 StepPlanHelper::StepPlanHelper(QObject *parent)
   : QObject( parent )
-  , edit_step_ac("/vigir/footstep_planning/edit_step", true)
-  , execute_step_plan_ac("/vigir/footstep_planning/execute_step_plan", true)
+  , edit_step_ac("/johnny5/footstep_planning/edit_step", true)
+  , execute_step_plan_ac("/johnny5/step_control_module/execute_step_plan", true)
   , fixed_frame_("")
   , step_edited(false)
 {
@@ -37,15 +37,15 @@ void StepPlanHelper::connectToActionServer()
 {
 
   if(edit_step_ac.waitForServer(ros::Duration(1,0)))
-    ROS_INFO("Connected to Action Server (/vigir/footstep_planning/edit_step)");
+    ROS_INFO("Connected to Action Server (/johnny5/footstep_planning/edit_step)");
   else
-    ROS_INFO("Could not connect to Action Server (/vigir/footstep_planning/edit_step)");
+    ROS_INFO("Could not connect to Action Server (/johnny5/footstep_planning/edit_step)");
 
   bool connected = execute_step_plan_ac.waitForServer(ros::Duration(1,0));
   if(connected)
-    ROS_INFO("Connected to Action Server (/vigir/footstep_planning/execute_step_plan)");
+    ROS_INFO("Connected to Action Server (/johnny5/footstep_planning/execute_step_plan)");
   else
-    ROS_INFO("Could not connect to Action Server (/vigir/footstep_planning/execute_step_plan)");
+    ROS_INFO("Could not connect to Action Server (/johnny5/footstep_planning/execute_step_plan)");
 
 }
 
@@ -70,7 +70,7 @@ void StepPlanHelper::editStep(vigir_footstep_planning_msgs::EditStep edit_step)
                           EditStepActionClient::SimpleFeedbackCallback());
   }
   else
-    ROS_WARN("edit_step not available! Please activate an \"/vigir/footstep_planning/edit_step\" action server.");
+    ROS_WARN("edit_step not available! Please activate an \"/johnny5/footstep_planning/edit_step\" action server.");
 
 }
 
@@ -113,7 +113,7 @@ void StepPlanHelper::combineStepPlans(std::vector<StepPlanMsg>& step_plans)
 {
   if (step_plans.size() != 2)
   {
-    ROS_WARN("Function stitchStepPlans() only meant for stitching when step is deleted.");
+    ROS_WARN("Function stitchStepPlans() only meant for stitching when one step is deleted.");
     return;
   }
   vigir_footstep_planning::StepPlan result(step_plans[0]);
@@ -220,7 +220,7 @@ void StepPlanHelper::executeStepPlan()
                           ExecuteStepPlanActionClient::SimpleFeedbackCallback());
   }
   else
-    ROS_WARN("execute_step_plan not available! Please activate an \"/vigir/footstep_planning/execute_step_plan\" action server.");
+    ROS_WARN("execute_step_plan not available! Please activate an \"/johnny5/footstep_planning/execute_step_plan\" action server.");
 
 }
 

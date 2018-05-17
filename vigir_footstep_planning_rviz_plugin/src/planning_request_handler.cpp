@@ -82,7 +82,7 @@ void PlanningRequestHandler::setReplanGoal(int index)
 {
   if(current_step_plan.steps.size() <= index)
   {
-    ROS_ERROR("Index %i invalid, maximum %i is allowed", index, current_step_plan.steps.size());
+    ROS_ERROR("Index %i invalid, maximum %i is allowed", index, (int)current_step_plan.steps.size());
     return;
   }
   FootMsg replan_goal = current_step_plan.steps[index].foot;
@@ -176,6 +176,39 @@ void PlanningRequestHandler::appendStepPlan(StepPlanMsg add)
 }
 
 // --------------
+
+// More Settings chosen by ui
+
+void PlanningRequestHandler::setStartStepIndex(int start_step)
+{
+  switch (start_step)
+  {
+  case 0:
+    request_->start_foot_selection = vigir_footstep_planning_msgs::StepPlanRequest::AUTO;
+    break;
+  case 1:
+    request_->start_foot_selection = vigir_footstep_planning_msgs::StepPlanRequest::LEFT;
+    break;
+  case 2:
+    request_->start_foot_selection = vigir_footstep_planning_msgs::StepPlanRequest::RIGHT;
+    break;
+  }
+}
+
+void PlanningRequestHandler::setMaxPlanningTime(double t)
+{
+  request_->max_planning_time = (float) t;
+}
+
+void PlanningRequestHandler::setMaxNofSteps(int noSteps)
+{
+  request_->max_number_steps = (float) noSteps;
+}
+
+void PlanningRequestHandler::setMaxPathLengthRatio(double ratio)
+{
+  request_->max_path_length_ratio = (float) ratio;
+}
 
 
 
