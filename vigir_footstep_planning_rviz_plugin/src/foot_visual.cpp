@@ -68,12 +68,12 @@ void StepVisual::createVisualAt(const Ogre::Vector3& position, const Ogre::Quate
 
   if(foot_index == FootMsg::LEFT)
   {
-    createFootMesh("/home/stephi/thor/src/thor/robotis/common/thormang3_description/meshes/robotis_l_leg_foot.stl");
+    createFootMesh("./thor/src/thor/robotis/common/thormang3_description/meshes/robotis_l_leg_foot.stl");
     foot_->setColor(1.0 , 0.0 , 0.0 , 0.9);
   }
   if(foot_index == FootMsg::RIGHT)
   {
-    createFootMesh("/home/stephi/thor/src/thor/robotis/common/thormang3_description/meshes/robotis_r_leg_foot.stl");
+    createFootMesh("./thor/src/thor/robotis/common/thormang3_description/meshes/robotis_r_leg_foot.stl");
     foot_->setColor(0.0 , 1.0 , 0.0 , 0.9);
   }
   foot_->setPosition(position+origin);
