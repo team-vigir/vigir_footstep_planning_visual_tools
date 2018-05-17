@@ -89,7 +89,7 @@ void PlanningRequestHandler::setReplanGoal(int index)
   geometry_msgs::Pose pose = replan_goal.pose;
 
   //compute shift for orientation
-  float x_shift= 0.04, y_shift = 0.11, z_shift = 0;/*-0.085*/
+  float x_shift= 0, y_shift = 0.093, z_shift = 0;/*-0.085*/
   if(replan_goal.foot_index == FootMsg::LEFT)
   {
     y_shift *= -1;

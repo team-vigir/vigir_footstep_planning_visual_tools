@@ -195,7 +195,7 @@ void RequestHandlerBase::setCurrentGoal(int last_index)
   geometry_msgs::Pose pose = last.pose;
 
   //compute shift for orientation
-  float x_shift= 0.04, y_shift = 0.11, z_shift = 0;
+  float x_shift= 0, y_shift = 0.093, z_shift = 0;
   if(last.foot_index == FootMsg::LEFT)
   {
     y_shift *= -1;

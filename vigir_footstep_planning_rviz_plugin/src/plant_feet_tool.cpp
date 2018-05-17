@@ -56,8 +56,8 @@ void PlantFeetTool::onInitialize()
   goal_visuals_.rset_capacity(2); // Todo: for way points higher capacity
   display_dir_ = true;
   // Werte die mit Parametern ersetzt werden müssen:
-  Ogre::Vector3 posLeft(-0.04,0.11,0); //Todo: wie setzt sich die 0.04 zusammen?
-  Ogre::Vector3 posRight(-0.04,-0.11,0);
+  Ogre::Vector3 posLeft(-0.04,0.093,0); //Todo: wie setzt sich die 0.04 zusammen?
+  Ogre::Vector3 posRight(-0.04,-0.093,0);
   Ogre::Vector3 scale(0.001,0.001,0.001);
   // -----------------------------------------------
   moving_feet_node_ = scene_manager_->getRootSceneNode()->createChildSceneNode();
@@ -116,8 +116,8 @@ void PlantFeetTool::updateMovingFeetVisibility()
       moving_right_->setPosition(Ogre::Vector3(0.0f,0.0f,0.0f));
       break;
     case BOTH:
-      Ogre::Vector3 posLeft(-0.04,0.11,0); //Todo: wie setzt sich die 0.04 zusammen?
-      Ogre::Vector3 posRight(-0.04,-0.11,0);
+      Ogre::Vector3 posLeft(-0.04,0.093,0); //Todo: wie setzt sich die 0.04 zusammen?
+      Ogre::Vector3 posRight(-0.04,-0.093,0);
       moving_left_->setVisible(true);
       moving_right_->setVisible(true);
       moving_left_->setPosition(posLeft);
