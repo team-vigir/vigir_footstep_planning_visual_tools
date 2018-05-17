@@ -14,6 +14,7 @@ RequestHandlerBase::RequestHandlerBase(QObject* parent)
   , replan_goal_index(0)
 {
   request_ = new vigir_footstep_planning_msgs::StepPlanRequest();
+  setFrameID(""); //default
   connectToActionServer();
   feedback_requested_=false;
   qRegisterMetaType<vigir_footstep_planning_msgs::StepPlan>("vigir_footstep_planning_msgs::StepPlan");
@@ -46,6 +47,7 @@ void RequestHandlerBase::resultCallback(const actionlib::SimpleClientGoalState& 
 {
   if(result->status.error == vigir_footstep_planning_msgs::ErrorStatus::NO_ERROR)
   {
+    ROS_INFO("No errors, set current step plan");
     setCurrentStepPlan(result->step_plan);
     Q_EMIT(createdStepPlan(result->step_plan));
   }

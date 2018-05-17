@@ -40,12 +40,27 @@
       <item row="1" column="0">
        <widget class="QLabel" name="patternStepDistanceLabel">
         <property name="text">
-         <string>Step Distance (m)</string>
+         <string>Step Distance</string>
         </property>
        </widget>
       </item>
       <item row="1" column="1">
        <widget class="QDoubleSpinBox" name="patternStepDistanceSpinBox">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>100</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="suffix">
+         <string> m</string>
+        </property>
         <property name="maximum">
          <double>10.000000000000000</double>
         </property>
@@ -57,12 +72,27 @@
       <item row="2" column="0">
        <widget class="QLabel" name="patternSideStepLabel">
         <property name="text">
-         <string>Side Step (m)</string>
+         <string>Side Step</string>
         </property>
        </widget>
       </item>
       <item row="2" column="1">
        <widget class="QDoubleSpinBox" name="patternSideStepDoubleSpinBox">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>100</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="suffix">
+         <string> m</string>
+        </property>
         <property name="maximum">
          <double>10.000000000000000</double>
         </property>
@@ -74,12 +104,30 @@
       <item row="4" column="0">
        <widget class="QLabel" name="patternRotationLabel">
         <property name="text">
-         <string>Rotation (deg)</string>
+         <string>Rotation</string>
         </property>
        </widget>
       </item>
       <item row="4" column="1">
        <widget class="QSpinBox" name="patternRotationSpinBox">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>100</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="suffix">
+         <string> deg</string>
+        </property>
+        <property name="prefix">
+         <string/>
+        </property>
         <property name="maximum">
          <number>359</number>
         </property>
@@ -94,6 +142,21 @@
       </item>
       <item row="5" column="1">
        <widget class="QDoubleSpinBox" name="patternDeltaZDoubleSpinBox">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>100</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="suffix">
+         <string> m</string>
+        </property>
         <property name="maximum">
          <double>10.000000000000000</double>
         </property>
@@ -103,7 +166,20 @@
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QSpinBox" name="patternNOStepsSpinBox"/>
+       <widget class="QSpinBox" name="patternNOStepsSpinBox">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>100</width>
+          <height>16777215</height>
+         </size>
+        </property>
+       </widget>
       </item>
       <item row="6" column="1">
        <widget class="QCheckBox" name="patternClosingStepCheckBox">
@@ -136,6 +212,9 @@
      <property name="title">
       <string/>
      </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
      <layout class="QGridLayout" name="gridLayout_4">
       <item row="9" column="2">
        <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -165,19 +244,28 @@
       <item row="5" column="0">
        <widget class="QLabel" name="patternRollLabel">
         <property name="text">
-         <string>Roll (deg)</string>
+         <string>Roll</string>
         </property>
        </widget>
       </item>
       <item row="8" column="0">
        <widget class="QLabel" name="patternPitchLabel">
         <property name="text">
-         <string>Pitch (deg)</string>
+         <string>Pitch</string>
         </property>
        </widget>
       </item>
       <item row="5" column="2">
        <widget class="QSpinBox" name="patternRollSpinBox">
+        <property name="maximumSize">
+         <size>
+          <width>100</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="suffix">
+         <string> deg</string>
+        </property>
         <property name="maximum">
          <number>359</number>
         </property>
@@ -185,6 +273,15 @@
       </item>
       <item row="8" column="2">
        <widget class="QSpinBox" name="patternPitchSpinBox">
+        <property name="maximumSize">
+         <size>
+          <width>100</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="suffix">
+         <string> deg</string>
+        </property>
         <property name="maximum">
          <number>359</number>
         </property>
@@ -201,6 +298,12 @@
         </item>
         <item>
          <widget class="QComboBox" name="patternStartFootComboBox">
+          <property name="maximumSize">
+           <size>
+            <width>100</width>
+            <height>16777215</height>
+           </size>
+          </property>
           <item>
            <property name="text">
             <string>AUTO</string>
@@ -241,7 +344,14 @@
        </widget>
       </item>
       <item row="3" column="2">
-       <widget class="QSpinBox" name="patternStartIndexSpinBox"/>
+       <widget class="QSpinBox" name="patternStartIndexSpinBox">
+        <property name="maximumSize">
+         <size>
+          <width>100</width>
+          <height>16777215</height>
+         </size>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>

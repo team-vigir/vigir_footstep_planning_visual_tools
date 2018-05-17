@@ -24,6 +24,10 @@ FootstepPlanningPanel::FootstepPlanningPanel( QWidget* parent )
   if(!icon_both.isNull())
     ui_->bothFeetToolButton->setIcon(icon_both);
 
+  ui_->moreOptionsGroupBox->setChecked(false);
+  ui_->patternWidget->ui->sequenceCheckBox->setVisible(false);
+  ui_->planningWidget->ui->sequenceCheckBox->setVisible(false);
+
   makePatternConnections();
   makePlanningConnections();
   // set Step plan if computed in other widget
@@ -60,7 +64,10 @@ void FootstepPlanningPanel::makePatternConnections()
   connect(ui_->patternWidget->request_handler_, SIGNAL(startFeetAnswer(vigir_footstep_planning_msgs::Feet)), this
               , SLOT(emitStartFeetAnswer(vigir_footstep_planning_msgs::Feet)));
 
+  connect(ui_->globalSequenceCheckBox, SIGNAL(toggled(bool)), ui_->patternWidget->ui->sequenceCheckBox, SLOT(setChecked(bool)));
   connect(ui_->patternWidget->ui->sequenceCheckBox, SIGNAL(toggled(bool)), ui_->planningWidget->ui->sequenceCheckBox, SLOT(setChecked(bool)));
+
+
 }
 
 void FootstepPlanningPanel::makePlanningConnections()
@@ -83,6 +90,7 @@ void FootstepPlanningPanel::makePlanningConnections()
 
   connect(ui_->planningWidget, SIGNAL(feetToolActivated(bool)), this, SLOT(emitFeetToolActivated(bool)));
 
+  connect(ui_->globalSequenceCheckBox, SIGNAL(toggled(bool)), ui_->planningWidget->ui->sequenceCheckBox, SLOT(setChecked(bool)));
   connect(ui_->planningWidget->ui->sequenceCheckBox, SIGNAL(toggled(bool)), ui_->patternWidget->ui->sequenceCheckBox, SLOT(setChecked(bool)));
 
 }

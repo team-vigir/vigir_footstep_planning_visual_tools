@@ -11,7 +11,7 @@
 
 #endif
 
-//typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::EditStepAction> EditStepActionClient;
+typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::EditStepAction> EditStepActionClient;
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::ExecuteStepPlanAction> ExecuteStepPlanActionClient;
 
 typedef vigir_footstep_planning_msgs::ErrorStatus ErrorStatusMsg;
@@ -63,7 +63,7 @@ private:
 
   ros::NodeHandle nh;
   ros::Publisher robot_pose_publisher;
- // EditStepActionClient edit_step_ac;
+  EditStepActionClient edit_step_ac;
   ExecuteStepPlanActionClient execute_step_plan_ac;
   std::string fixed_frame_;
 

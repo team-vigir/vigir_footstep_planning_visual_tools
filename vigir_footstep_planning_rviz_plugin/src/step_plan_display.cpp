@@ -26,13 +26,66 @@
 namespace vigir_footstep_planning_rviz_plugin
 {
 StepPlanDisplay::StepPlanDisplay()
+  : displayFeedback(false)
+  , interaction_mode_(PLANE)
+  , last_step_index(0)
+  , index_feet_tool(-1)
 {
-  step_plan_helper_ = new StepPlanHelper();
-  displayFeedback = false;
-  interaction_mode_ = PLANE;
-  last_step_index = 0;
   qRegisterMetaType<vigir_footstep_planning_msgs::Step>("vigir_footstep_planning_msgs::Step");
 
+  initializeDisplayProperties();
+}
+
+StepPlanDisplay::~StepPlanDisplay()
+{
+  if(index_feet_tool >-1)
+  {
+    tool_manager_->removeTool(index_feet_tool); // plant feet
+  }
+  delete interactive_marker_server_;
+  delete panel_;
+  if(step_plan_helper_)
+    delete step_plan_helper_;
+}
+
+void StepPlanDisplay::onInitialize()
+{
+  setIcon(QIcon("./vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/bothFeet.png"));
+  step_visuals_.rset_capacity(100);
+  start_visuals_.rset_capacity(2);
+
+  panel_= new FootstepPlanningPanel();
+  this->setAssociatedWidget (panel_);
+
+  step_plan_helper_= new StepPlanHelper();
+
+  tool_manager_ = context_->getToolManager();
+
+  index_feet_tool = tool_manager_->numTools();
+  feet_tool_ = static_cast<PlantFeetTool*>(tool_manager_->addTool("footstep_planning_rviz_plugin/PlantFeet"));
+  interact_tool_ = tool_manager_->addTool("rviz/Interact");
+
+  interactive_marker_server_ = new interactive_markers::InteractiveMarkerServer("foot_marker");
+  if(feet_tool_)
+    feet_tool_->setInteractiveMarkerServer(interactive_marker_server_);
+
+  rviz::DisplayGroup* display_group = context_->getRootDisplayGroup();
+  interactive_marker_display_ = (rviz::InteractiveMarkerDisplay*) display_group->createDisplay("rviz/InteractiveMarkers");
+  interactive_marker_display_->initialize(context_);
+  interactive_marker_display_->subProp("Update Topic")->setValue("/foot_marker/update");
+  display_group->addChild(interactive_marker_display_);
+  interactive_marker_display_->setName("Step Plan Interaction");
+  bool connected_edit_step = step_plan_helper_ ? step_plan_helper_->checkConnection() : false;
+  interactive_marker_display_->setEnabled(connected_edit_step);
+
+  makeConnections();
+
+  //Solve duplicate FootTool Problem:
+  connect(tool_manager_, SIGNAL(toolAdded(Tool*)), this, SLOT(checkTool(Tool*)));
+}
+
+void StepPlanDisplay::initializeDisplayProperties()
+{
   frame_id_property_ = new rviz::StringProperty( "Frame ID", "",
                                                "Frame ID",
                                                 this, SLOT( updateFrameID() ));
@@ -62,67 +115,86 @@ StepPlanDisplay::StepPlanDisplay()
                                            this, SLOT(visualizeStepCost()));
 }
 
-void StepPlanDisplay::onInitialize()
+void StepPlanDisplay::makeFeetToolConnections()
 {
-  setIcon(QIcon("./vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/bothFeet.png"));
-  step_visuals_.rset_capacity(100);
-  start_visuals_.rset_capacity(2);
+  if(step_plan_helper_)
+    connect(feet_tool_, SIGNAL(newStartPose(Ogre::Vector3, Ogre::Quaternion)), step_plan_helper_, SLOT(setRobotPose(Ogre::Vector3, Ogre::Quaternion)));
+  connect( feet_tool_, SIGNAL(feetDropped(Ogre::Vector3, Ogre::Quaternion, PlantFeetMode)),
+           this, SLOT(handleFeetPose(Ogre::Vector3, Ogre::Quaternion, PlantFeetMode)));
+  connect(panel_, SIGNAL(goalFeetAnswer(vigir_footstep_planning_msgs::Feet)), feet_tool_, SLOT(addGoalFeet(vigir_footstep_planning_msgs::Feet)));
+  connect(feet_tool_, SIGNAL(activateTool(bool)), this, SLOT(activateFeetTool(bool)));
+  connect(panel_, SIGNAL(clearScene()), feet_tool_, SLOT(reset()));
+}
 
-  panel_= new FootstepPlanningPanel();
-  tool_manager_ = context_->getToolManager();
+void StepPlanDisplay::disconnectFeetTool()
+{
+  disconnect( feet_tool_, SIGNAL(feetDropped(Ogre::Vector3, Ogre::Quaternion, PlantFeetMode)),
+           this, SLOT(handleFeetPose(Ogre::Vector3, Ogre::Quaternion, PlantFeetMode)));
+  disconnect(panel_, SIGNAL(goalFeetAnswer(vigir_footstep_planning_msgs::Feet)), feet_tool_, SLOT(addGoalFeet(vigir_footstep_planning_msgs::Feet)));
+  disconnect(feet_tool_, SIGNAL(activateTool(bool)), this, SLOT(activateFeetTool(bool)));
+  if(step_plan_helper_)
+    disconnect(feet_tool_, SIGNAL(newStartPose(Ogre::Vector3, Ogre::Quaternion)), step_plan_helper_, SLOT(setRobotPose(Ogre::Vector3, Ogre::Quaternion)));
+  disconnect(panel_, SIGNAL(clearScene()), feet_tool_, SLOT(reset()));
+}
 
-  feet_tool_ = static_cast<PlantFeetTool*>(tool_manager_->addTool("footstep_planning_rviz_plugin/PlantFeet"));
-  step_plan_helper_->setFixedFrame(fixed_frame_);
-  interact_tool_ = tool_manager_->addTool("rviz/Interact");
-
-  interactive_marker_server_ = new interactive_markers::InteractiveMarkerServer("foot_marker");
-  feet_tool_->setInteractiveMarkerServer(interactive_marker_server_);
-  rviz::DisplayGroup* display_group = context_->getRootDisplayGroup();
-  interactive_marker_display_ = (rviz::InteractiveMarkerDisplay*) display_group->createDisplay("rviz/InteractiveMarkers");
-  interactive_marker_display_->initialize(context_);
-  interactive_marker_display_->subProp("Update Topic")->setValue("/foot_marker/update");
-  display_group->addChild(interactive_marker_display_);
-
-  interactive_marker_display_->setName("Step Plan Interaction");
-  bool connected_edit_step = step_plan_helper_->checkConnection();
-  interactive_marker_display_->setEnabled(connected_edit_step);
-
-  this->setAssociatedWidget (panel_);
-
+void StepPlanDisplay::makeConnections()
+{
   // on step plan created
   connect( panel_, SIGNAL( createdStepPlan( vigir_footstep_planning_msgs::StepPlan ) ), this, SLOT( displayStepPlan( vigir_footstep_planning_msgs::StepPlan ) ));
+
+  // Feet Tool, Set Goal
+  connect(panel_,  SIGNAL( feetToolActivated(bool)), this, SLOT(activateFeetTool(bool)) );
+  connect(panel_,  SIGNAL( feetToolActivated(PlantFeetMode, bool)), this, SLOT(activateFeetTool(PlantFeetMode, bool)) );
+
+  // Get Feedback
+  connect(this, SIGNAL(feedbackRequestedChanged(bool)), panel_, SLOT(setFeedbackRequested(bool)));
+  connect(panel_, SIGNAL(sendPlanningFeedback(vigir_footstep_planning_msgs::PlanningFeedback)), this, SLOT(visualizeFeedback(vigir_footstep_planning_msgs::PlanningFeedback)));
+
+  // Display Options
+  connect( panel_, SIGNAL(displayRangeChanged(int,int)), this, SLOT(updateDisplay(int, int)));
+  connect(panel_, SIGNAL(interactionModeChanged(int)), this, SLOT(setInteractionMode(int)));
+
+  // Clear Scene
+  connect(panel_, SIGNAL(clearScene()), this, SLOT(reset()));
+
+
+  // start pose
+  connect(this, SIGNAL(requestStartPose()), panel_, SLOT(startPoseRequested()));
+  connect(panel_, SIGNAL(startFeetAnswer(vigir_footstep_planning_msgs::Feet)), this, SLOT(addStartFeet(vigir_footstep_planning_msgs::Feet)));
+
+  makeFeetToolConnections();
+
+  if(step_plan_helper_)
+    makeStepPlanHelperConnections();
+
+}
+
+void StepPlanDisplay::makeStepVisualConnections(const StepVisual* visual)
+{
+  if(step_plan_helper_)
+    connect(visual, SIGNAL(stepEdited(vigir_footstep_planning_msgs::EditStep)), step_plan_helper_, SLOT(editStep(vigir_footstep_planning_msgs::EditStep)));
+
+  connect(panel_, SIGNAL(clearIM()), visual, SLOT(setButtonInteractiveMarker()));
+  connect(visual, SIGNAL(cutStepPlanHere(int)), this, SLOT(visualizeCut(int)));
+  connect(visual, SIGNAL(cutStepPlanHere(int)),panel_, SLOT(setLastStep(int)) );
+  connect(visual, SIGNAL(replanToHere(int)), panel_, SLOT(replanToIndex(int)));
+  connect(visual, SIGNAL(replanToHere(int)), this, SLOT(visualizeReplan(int)));
+}
+
+void StepPlanDisplay::makeStepPlanHelperConnections()
+{
+
   connect( panel_ , SIGNAL( createdStepPlan( vigir_footstep_planning_msgs::StepPlan ) ), step_plan_helper_, SLOT( setCurrentStepPlan( vigir_footstep_planning_msgs::StepPlan ) ));
   connect( step_plan_helper_, SIGNAL( createdStepPlan( vigir_footstep_planning_msgs::StepPlan ) ), this, SLOT( displayStepPlan( vigir_footstep_planning_msgs::StepPlan ) ));
   connect( step_plan_helper_, SIGNAL(createdStepPlan(vigir_footstep_planning_msgs::StepPlan)), panel_, SLOT( setStepPlan(vigir_footstep_planning_msgs::StepPlan)));
 
-  connect (step_plan_helper_, SIGNAL(stepValidUpdate(unsigned int, bool )), this, SLOT(setStepValid(unsigned int, bool )));
-  // Feet Tool, Set Goal
-  connect(panel_,  SIGNAL( feetToolActivated(bool)), this, SLOT(activateFeetTool(bool)) );
-  connect(panel_,  SIGNAL( feetToolActivated(PlantFeetMode, bool)), this, SLOT(activateFeetTool(PlantFeetMode, bool)) );
-  connect(panel_, SIGNAL(goalFeetAnswer(vigir_footstep_planning_msgs::Feet)), feet_tool_, SLOT(addGoalFeet(vigir_footstep_planning_msgs::Feet)));
-  connect( feet_tool_, SIGNAL(feetDropped(Ogre::Vector3, Ogre::Quaternion, PlantFeetMode)),
-           this, SLOT(handleFeetPose(Ogre::Vector3, Ogre::Quaternion, PlantFeetMode)));
-  connect(feet_tool_, SIGNAL(activateTool(bool)), this, SLOT(activateFeetTool(bool)));
-  connect(feet_tool_, SIGNAL(newStartPose(Ogre::Vector3, Ogre::Quaternion)), step_plan_helper_, SLOT(setRobotPose(Ogre::Vector3, Ogre::Quaternion)));
-  // Get Feedback
-  connect(this, SIGNAL(feedbackRequestedChanged(bool)), panel_, SLOT(setFeedbackRequested(bool)));
-  connect(panel_, SIGNAL(sendPlanningFeedback(vigir_footstep_planning_msgs::PlanningFeedback)), this, SLOT(visualizeFeedback(vigir_footstep_planning_msgs::PlanningFeedback)));
-  // Display Options
-  connect( panel_, SIGNAL(displayRangeChanged(int,int)), this, SLOT(updateDisplay(int, int)));
-  // Clear Scene
-  connect(panel_, SIGNAL(clearScene()), this, SLOT(reset()));
-//  connect(panel_, SIGNAL(clearScene()), feet_tool_, SLOT(reset()));
+  // step_plan_helper functions
   connect(panel_, SIGNAL(undo()), step_plan_helper_, SLOT(setPreviousStepPlan()));
+  connect (step_plan_helper_, SIGNAL(stepValidUpdate(unsigned int, bool )), this, SLOT(setStepValid(unsigned int, bool )));
   connect(panel_, SIGNAL(acceptModifiedStepPlan()), step_plan_helper_, SLOT(acceptModifiedStepPlan()));
-  connect(this, SIGNAL(requestStartPose()), panel_, SLOT(startPoseRequested()));
-  connect(panel_, SIGNAL(startFeetAnswer(vigir_footstep_planning_msgs::Feet)), this, SLOT(addStartFeet(vigir_footstep_planning_msgs::Feet)));
-  connect(panel_, SIGNAL(interactionModeChanged(int)), this, SLOT(setInteractionMode(int)));
 
+  // execute
   connect(panel_, SIGNAL(executeRequested()), step_plan_helper_, SLOT(executeStepPlan()));
-
-  //Solve duplicate FootTool Problem:
-  connect(tool_manager_, SIGNAL(toolAdded(Tool*)), this, SLOT(checkTool(Tool*)));
-
 }
 
 void StepPlanDisplay::update(float wall_dt, float ros_dt)
@@ -132,16 +204,10 @@ void StepPlanDisplay::update(float wall_dt, float ros_dt)
 
 void StepPlanDisplay::fixedFrameChanged()
 {
-  step_plan_helper_->setFixedFrame(fixed_frame_);
+  if(step_plan_helper_)
+    step_plan_helper_->setFixedFrame(fixed_frame_);
 }
 
-
-StepPlanDisplay::~StepPlanDisplay()
-{
-  delete interactive_marker_server_;
-  delete panel_;
-  delete step_plan_helper_;
-}
 
 void StepPlanDisplay::updateFrameID()
 {
@@ -163,7 +229,6 @@ void StepPlanDisplay::reset()
   start_visuals_.clear();
 }
 
-
 void StepPlanDisplay::displayStepPlan(const vigir_footstep_planning_msgs::StepPlan& step_plan)
 {
   last_step_index = step_plan.steps.size();
@@ -178,7 +243,33 @@ void StepPlanDisplay::displayStepPlan(const vigir_footstep_planning_msgs::StepPl
     addStartFeet(step_plan.start, position, orientation);
     displaySteps(step_plan.steps, position, orientation);
     setStartVisible();
-    feet_tool_->reset(); // dont show goal
+    visualizeStepCost();
+    if(feet_tool_)
+      feet_tool_->reset(); // dont show goal
+  }
+}
+
+void StepPlanDisplay::displaySteps(const std::vector<vigir_footstep_planning_msgs::Step>& steps, const Ogre::Vector3& frame_position, const Ogre::Quaternion& frame_orientation)
+{
+  bool displIndex = display_index_->getBool();
+  for (unsigned i = 0; i< steps.size(); i++)
+  {
+    boost::shared_ptr<StepVisual> visual;
+    visual.reset(new StepVisual( scene_manager_, scene_node_, steps[i].foot.foot_index , steps[i].header.frame_id, steps[i].step_index));
+    visual->createByMessage( steps[i] );
+    visual->setFramePosition( frame_position );
+    visual->setFrameOrientation( frame_orientation );
+    visual->displayIndex(displIndex);
+
+    //Interactive Marker:
+    if(!displayFeedback)
+    {
+      visual->initializeInteractiveMarker(interactive_marker_server_);
+      visual->setInteractionMode(interaction_mode_);
+
+      makeStepVisualConnections(visual.get());
+    }
+    step_visuals_.push_back(visual);
   }
 }
 
@@ -186,7 +277,8 @@ void StepPlanDisplay::activateFeetTool(bool active)
 {
   if ( active )
   {
-    tool_manager_->setCurrentTool(feet_tool_);
+    if(feet_tool_)
+      tool_manager_->setCurrentTool(feet_tool_);
   }
   else
   {
@@ -196,7 +288,8 @@ void StepPlanDisplay::activateFeetTool(bool active)
 
 void StepPlanDisplay::activateFeetTool(PlantFeetMode mode, bool active)
 {
-  feet_tool_->setMode(mode);
+  if(feet_tool_)
+    feet_tool_->setMode(mode);
   activateFeetTool(active);
 }
 
@@ -256,36 +349,6 @@ void StepPlanDisplay::updateDisplay(int from, int to)
   }
 }
 
-void StepPlanDisplay::displaySteps(const std::vector<vigir_footstep_planning_msgs::Step>& steps, const Ogre::Vector3& frame_position, const Ogre::Quaternion& frame_orientation)
-{
-  bool displIndex = display_index_->getBool();  
-  for (unsigned i = 0; i< steps.size(); i++)
-  {
-    boost::shared_ptr<StepVisual> visual;
-    visual.reset(new StepVisual( scene_manager_, scene_node_, steps[i].foot.foot_index , steps[i].header.frame_id, steps[i].step_index));
-    visual->createByMessage( steps[i] );
-    visual->setFramePosition( frame_position );
-    visual->setFrameOrientation( frame_orientation );
-    visual->displayIndex(displIndex);
-
-    //Interactive Marker:
-    if(!displayFeedback)
-    {
-      visual->initializeInteractiveMarker(interactive_marker_server_);
-      visual->setInteractionMode(interaction_mode_);
-      connect(visual.get(), SIGNAL(stepEdited(vigir_footstep_planning_msgs::EditStep)), step_plan_helper_, SLOT(editStep(vigir_footstep_planning_msgs::EditStep)));
-      connect(panel_, SIGNAL(clearIM()), visual.get(), SLOT(setButtonInteractiveMarker()));
-      connect(visual.get(), SIGNAL(cutStepPlanHere(int)), this, SLOT(visualizeCut(int)));
-      connect(visual.get(), SIGNAL(cutStepPlanHere(int)),panel_, SLOT(setLastStep(int)) );
-      connect(visual.get(), SIGNAL(replanToHere(int)), panel_, SLOT(replanToIndex(int)));
-      connect(visual.get(), SIGNAL(replanToHere(int)), this, SLOT(visualizeReplan(int)));
-    }
-    step_visuals_.push_back(visual);
-  }
-}
-
-
-
 void StepPlanDisplay::visualizeFeedback(vigir_footstep_planning_msgs::PlanningFeedback feedback)
 {
   if(display_feedback_->getBool())
@@ -303,7 +366,7 @@ void StepPlanDisplay::setDisplayFeedback()
 void StepPlanDisplay::updateACConnected()
 {
   bool connected_step_plan = panel_->checkConnection();
-  bool connected_edit_step = step_plan_helper_->checkConnection();
+  bool connected_edit_step = step_plan_helper_ ? step_plan_helper_->checkConnection() : false;
 
   if(connected_step_plan && connected_edit_step)
   {
@@ -338,18 +401,12 @@ void StepPlanDisplay::save( rviz::Config config ) const
 // Prevent Problem when saved and started:
 void StepPlanDisplay::checkTool(rviz::Tool* tool)
 {
-//  ROS_INFO("%s", tool->getName().toStdString().c_str());
+ // ROS_INFO("%s", tool->getName().toStdString().c_str());
   if(tool->getName()=="Plant Feet")
   {
-
-    feet_tool_=static_cast<PlantFeetTool*>(tool);
+    feet_tool_ = static_cast<PlantFeetTool*>(tool);
     feet_tool_->setInteractiveMarkerServer(interactive_marker_server_);
-    connect( feet_tool_, SIGNAL(feetDropped(Ogre::Vector3, Ogre::Quaternion, PlantFeetMode)),
-             this, SLOT(handleFeetPose(Ogre::Vector3, Ogre::Quaternion, PlantFeetMode)));
-    connect(panel_, SIGNAL(goalFeetAnswer(vigir_footstep_planning_msgs::Feet)), feet_tool_, SLOT(addGoalFeet(vigir_footstep_planning_msgs::Feet)));
-    connect(feet_tool_, SIGNAL(activateTool(bool)), this, SLOT(activateFeetTool(bool)));
-    connect(feet_tool_, SIGNAL(newStartPose(Ogre::Vector3, Ogre::Quaternion)), step_plan_helper_, SLOT(setRobotPose(Ogre::Vector3, Ogre::Quaternion)));
-    connect(panel_, SIGNAL(clearScene()), feet_tool_, SLOT(reset()));
+    makeFeetToolConnections();
   }
   if(tool->getName() == "Interact")
   {
@@ -359,7 +416,8 @@ void StepPlanDisplay::checkTool(rviz::Tool* tool)
 
 void StepPlanDisplay::setStepValid(unsigned int index, bool valid)
 {
-  //if(visualize_valid_->getBool()) todo
+ // if(visualize_valid_->getBool()) todo
+  if(!visualize_cost_->getBool())
     step_visuals_[index]->setValid(valid);
 }
 
@@ -397,6 +455,7 @@ bool StepPlanDisplay::transformToFixedFrame(Ogre::Vector3& position, Ogre::Quate
 {
   if ( !context_->getFrameManager()->getTransform( header.frame_id,
                                                    header.stamp,
+
                                                    position, orientation))
   {
     ROS_INFO( "Error transforming from frame '%s' to frame '%s'",
@@ -417,11 +476,13 @@ void StepPlanDisplay::handleFeetPose(Ogre::Vector3 position, Ogre::Quaternion or
     return;
   case LEFT:
     visual.reset(new StepVisual( scene_manager_, scene_node_,vigir_footstep_planning_msgs::Foot::LEFT,frame_id_property_->getString().toStdString(), step_visuals_.size()));
-    step_plan_helper_->addStep(frame_id_property_->getString().toStdString(), position, orientation,vigir_footstep_planning_msgs::Foot::LEFT, step_visuals_.size());
+    if( step_plan_helper_)
+      step_plan_helper_->addStep(frame_id_property_->getString().toStdString(), position, orientation,vigir_footstep_planning_msgs::Foot::LEFT, step_visuals_.size());
     break;
   case RIGHT:
     visual.reset(new StepVisual( scene_manager_, scene_node_, vigir_footstep_planning_msgs::Foot::RIGHT, frame_id_property_->getString().toStdString(), step_visuals_.size()));
-    step_plan_helper_->addStep(frame_id_property_->getString().toStdString(), position, orientation,vigir_footstep_planning_msgs::Foot::RIGHT, step_visuals_.size());
+    if( step_plan_helper_)
+      step_plan_helper_->addStep(frame_id_property_->getString().toStdString(), position, orientation,vigir_footstep_planning_msgs::Foot::RIGHT, step_visuals_.size());
     break;
   }
 
@@ -430,15 +491,9 @@ void StepPlanDisplay::handleFeetPose(Ogre::Vector3 position, Ogre::Quaternion or
     visual->displayIndex( display_index_->getBool());
     visual->createVisualAt(position, orientation);
     visual->initializeInteractiveMarker(interactive_marker_server_);
-    connect(visual.get(), SIGNAL(stepEdited(vigir_footstep_planning_msgs::EditStep)), step_plan_helper_, SLOT(editStep(vigir_footstep_planning_msgs::EditStep)));
-    connect(panel_, SIGNAL(clearIM()), visual.get(), SLOT(setButtonInteractiveMarker()));
-
-    // connect(visual.get(), SIGNAL(cutStepPlanHere(int)), this, SLOT(visualizeCut(int)));
-  //  connect(visual.get(), SIGNAL(cutStepPlanHere(int)),panel_, SLOT(setLastStep(int)) );
+    makeStepVisualConnections(visual.get());
     step_visuals_.push_back(visual);
-
   }
-
 
 }
 void StepPlanDisplay::setInteractionMode(int interaction_mode)

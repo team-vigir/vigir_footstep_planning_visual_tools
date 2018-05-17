@@ -32,13 +32,13 @@ PlantFeetTool::PlantFeetTool()
 // button.
 PlantFeetTool::~PlantFeetTool()
 {
-  goal_visuals_.clear();
-  if(interactive_marker_server_)
+  ROS_INFO("plant feet destruktor");
+  //goal_visuals_.clear();
+ /* if(interactive_marker_server_)
   {
     interactive_marker_server_->erase("feet_im");
     interactive_marker_server_->applyChanges();
-  }
-
+  }*/
 }
 
 void PlantFeetTool::setInteractiveMarkerServer(interactive_markers::InteractiveMarkerServer* server)

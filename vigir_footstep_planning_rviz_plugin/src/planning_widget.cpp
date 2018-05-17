@@ -9,6 +9,7 @@ PlanningWidget::PlanningWidget(QWidget *parent) :
     ui(new Ui::PlanningWidget)
 {
     ui->setupUi(this);
+    ui->moreOptionsGroupBox->setChecked(false);
     request_handler_ = new PlanningRequestHandler();
 
     // ui signals

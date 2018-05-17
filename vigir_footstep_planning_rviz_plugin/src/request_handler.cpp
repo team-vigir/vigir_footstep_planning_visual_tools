@@ -46,19 +46,16 @@ void RequestHandler::sendRequest()
 {
   vigir_footstep_planning_msgs::StepPlanRequestGoal goal;
   goal.plan_request = *request_;
-   ROS_INFO("Sending goal.....");
   // Need boost::bind to pass in the 'this' pointer
   ac.sendGoal(goal,
               boost::bind(&RequestHandler::resultCallback, this, _1, _2),
               StepPlanRequestActionClient::SimpleActiveCallback(),
               boost::bind(&RequestHandler::feedbackCallback, this, _1));
 
-   ROS_INFO("Goal sent.");
 }
 
 void RequestHandler::resultCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::StepPlanRequestResultConstPtr& result)
 {
-  ROS_INFO("Step Plan Action Completed.");
   result_=result;
   if(result->status.error == vigir_footstep_planning_msgs::ErrorStatus::NO_ERROR)
   {

@@ -13,7 +13,7 @@
 #include <actionlib/client/terminal_state.h>
 #include <vigir_footstep_planning_rviz_plugin/plant_feet_tool.h>
 #include <vigir_footstep_planning_rviz_plugin/foot_visual.h>
-
+#include <memory>
 #endif
 
 
@@ -96,6 +96,12 @@ Q_SIGNALS:
   void stepIsValid(bool valid);
 
 private:
+  void initializeDisplayProperties();
+  void makeFeetToolConnections();
+  void makeConnections();
+  void disconnectFeetTool();
+  void makeStepVisualConnections(const StepVisual* visual);
+  void makeStepPlanHelperConnections();
   void processMessage( const vigir_footstep_planning::msgs::StepPlan::ConstPtr& msg);
   void addStartFeet(const vigir_footstep_planning_msgs::Feet& start, const Ogre::Vector3& frame_position, const Ogre::Quaternion& frame_orientation);
   void displaySteps(const std::vector<vigir_footstep_planning_msgs::Step>& steps, const Ogre::Vector3& frame_position, const Ogre::Quaternion& frame_orientation);
@@ -115,7 +121,8 @@ private:
 
   FootstepPlanningPanel* panel_;
   rviz::ToolManager* tool_manager_;
-  PlantFeetTool * feet_tool_;
+  PlantFeetTool* feet_tool_;
+  int index_feet_tool;
   rviz::Tool* interact_tool_;
   rviz::InteractiveMarkerDisplay* interactive_marker_display_;
   // handles interactive markers created in StepVisual

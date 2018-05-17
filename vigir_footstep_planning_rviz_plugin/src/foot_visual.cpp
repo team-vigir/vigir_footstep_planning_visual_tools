@@ -50,10 +50,6 @@ StepVisual::StepVisual( Ogre::SceneManager* scene_manager, Ogre::SceneNode* pare
 
 StepVisual::~StepVisual()
 {
-  if(interaction)
-  {
-    disableInteractiveMarker();
-  }
   // Destroy the frame node since we don't need it anymore.
  scene_manager_->destroySceneNode( frame_node_ );
  delete stl_loader_;
@@ -73,12 +69,12 @@ void StepVisual::createVisualAt(const Ogre::Vector3& position, const Ogre::Quate
   if(foot_index == FootMsg::LEFT)
   {
     createFootMesh("/home/stephi/thor/src/thor/robotis/common/thormang3_description/meshes/robotis_l_leg_foot.stl");
-    foot_->setColor(1.0 , 0.0 , 0.0 , 0.7);
+    foot_->setColor(1.0 , 0.0 , 0.0 , 0.9);
   }
   if(foot_index == FootMsg::RIGHT)
   {
     createFootMesh("/home/stephi/thor/src/thor/robotis/common/thormang3_description/meshes/robotis_r_leg_foot.stl");
-    foot_->setColor(0.0 , 1.0 , 0.0 , 0.7);
+    foot_->setColor(0.0 , 1.0 , 0.0 , 0.9);
   }
   foot_->setPosition(position+origin);
   foot_->setOrientation(orientation);
@@ -253,17 +249,17 @@ void StepVisual::setValid(bool valid)
 {
   if(!valid)
   {
-    foot_->setColor(0.5 , 0.5 , 0.5 , 0.7);
+    foot_->setColor(0.5 , 0.5 , 0.5 , 0.9);
   }
   else
   {
     if(foot_index == FootMsg::LEFT)
     {
-      foot_->setColor(1.0 , 0.0 , 0.0 , 0.7);
+      foot_->setColor(1.0 , 0.0 , 0.0 , 0.9);
     }
     if(foot_index == FootMsg::RIGHT)
     {
-      foot_->setColor(0.0 , 1.0 , 0.0 , 0.7);
+      foot_->setColor(0.0 , 1.0 , 0.0 , 0.9);
     }
   }
 }
@@ -319,7 +315,7 @@ visualization_msgs::Marker StepVisual::makeMarker(bool transparent)
   marker.color.r = foot_index == FootMsg::LEFT ? 1 : 0;
   marker.color.g = foot_index == FootMsg::RIGHT ? 1 : 0;
   marker.color.b = 0;
-  marker.color.a = transparent? 0 : 0.25;
+  marker.color.a = transparent? 0 : 0.1;
   return marker;
 }
 
@@ -340,7 +336,7 @@ void StepVisual::setButtonInteractiveMarker()
   eraseInteractiveMarkers();
 
   visualization_msgs::InteractiveMarker im = makeInteractiveMarker("button");
-  visualization_msgs::Marker box_marker = makeMarker(true);
+  visualization_msgs::Marker box_marker = makeMarker(false/*true*/);
 
   visualization_msgs::InteractiveMarkerControl control;
   control.interaction_mode = visualization_msgs::InteractiveMarkerControl::BUTTON;
@@ -528,7 +524,7 @@ void StepVisual::visualizeCost(float max)
   if(ratio < 0)
     ratio=0;
 
-  foot_->setColor(1-ratio, 0.0, ratio, 0.7);
+  foot_->setColor(1-ratio, 0.0, ratio, 0.9);
 }
 
 } // end namespace vigir_footstep_planning_rviz_plugin

@@ -11,6 +11,8 @@ PatternWidget::PatternWidget(QWidget *parent) :
     ui->setupUi(this);
     request_handler_ = new PatternRequestHandler();
 
+    ui->patternMoreOptionsCheckbox->setChecked(false);
+
     //Pattern Planning Parameter Signal Slot connection, set request handler values --------------------------
     connect(ui->patternNOStepsSpinBox,SIGNAL(valueChanged(int)), request_handler_, SLOT(setNoSteps(int)));
     connect(ui->patternStepDistanceSpinBox,SIGNAL(valueChanged(double)), request_handler_, SLOT(setStepDistance(double)));

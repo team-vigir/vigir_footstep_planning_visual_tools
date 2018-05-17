@@ -164,7 +164,6 @@ set(HEADERS
   include/${PROJECT_NAME}/request_handler_base.h
   include/${PROJECT_NAME}/planning_request_handler.h
   include/${PROJECT_NAME}/pattern_request_handler.h
-  ~/thor/build/${PROJECT_NAME}/ui_paneldesign.h
   include/${PROJECT_NAME}/share.h
   include/${PROJECT_NAME}/planning_widget.h
   include/${PROJECT_NAME}/pattern_widget.h
