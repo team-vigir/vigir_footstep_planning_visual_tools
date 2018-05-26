@@ -42,6 +42,7 @@ StepPlanDisplay::~StepPlanDisplay()
   {
     tool_manager_->removeTool(index_feet_tool); // plant feet
   }
+  step_visuals_.clear();
   delete interactive_marker_server_;
   delete panel_;
   if(step_plan_helper_)
@@ -50,11 +51,24 @@ StepPlanDisplay::~StepPlanDisplay()
 
 void StepPlanDisplay::onInitialize()
 {
-  setIcon(QIcon("./vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/bothFeet.png"));
+  // Get thor_dir:
+  thor_dir = "";
+  std::string params_path;
+  if (nh.getParam("/johnny5/footstep_planning/params_path", params_path))
+  {
+    thor_dir = params_path + "../../../../../..";
+    ROS_INFO("%s", thor_dir.c_str());
+  }
+  else
+  {
+    ROS_INFO("Could not retrieve thor directory.");
+  }
+
+  setIcon(QIcon(QString::fromStdString(thor_dir + "/src/vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/bothFeet.png")));
   step_visuals_.rset_capacity(100);
   start_visuals_.rset_capacity(2);
 
-  panel_= new FootstepPlanningPanel();
+  panel_= new FootstepPlanningPanel(thor_dir);
   this->setAssociatedWidget (panel_);
 
   step_plan_helper_= new StepPlanHelper();
@@ -231,11 +245,11 @@ void StepPlanDisplay::reset()
 
 void StepPlanDisplay::displayStepPlan(const vigir_footstep_planning_msgs::StepPlan& step_plan)
 {
+  //ROS_INFO("display step plan");
   last_step_index = step_plan.steps.size();
 
   Ogre::Quaternion orientation;
   Ogre::Vector3 position;
-
   if(transformToFixedFrame(position, orientation, step_plan.header))
   {
     displayFeedback = false;
@@ -243,10 +257,11 @@ void StepPlanDisplay::displayStepPlan(const vigir_footstep_planning_msgs::StepPl
     addStartFeet(step_plan.start, position, orientation);
     displaySteps(step_plan.steps, position, orientation);
     setStartVisible();
-    visualizeStepCost();
+   // visualizeStepCost(); todo
     if(feet_tool_)
       feet_tool_->reset(); // dont show goal
   }
+
 }
 
 void StepPlanDisplay::displaySteps(const std::vector<vigir_footstep_planning_msgs::Step>& steps, const Ogre::Vector3& frame_position, const Ogre::Quaternion& frame_orientation)
@@ -255,7 +270,7 @@ void StepPlanDisplay::displaySteps(const std::vector<vigir_footstep_planning_msg
   for (unsigned i = 0; i< steps.size(); i++)
   {
     boost::shared_ptr<StepVisual> visual;
-    visual.reset(new StepVisual( scene_manager_, scene_node_, steps[i].foot.foot_index , steps[i].header.frame_id, steps[i].step_index));
+    visual.reset(new StepVisual( scene_manager_, scene_node_, steps[i].foot.foot_index , thor_dir + "/src/thor/robotis/common/thormang3_description/meshes", steps[i].header.frame_id, steps[i].step_index));
     visual->createByMessage( steps[i] );
     visual->setFramePosition( frame_position );
     visual->setFrameOrientation( frame_orientation );
@@ -307,14 +322,14 @@ void StepPlanDisplay::addStartFeet(const vigir_footstep_planning_msgs::Feet& sta
 {
   start_visuals_.clear();
   boost::shared_ptr<StepVisual> right_visual;
-  right_visual.reset(new StepVisual(scene_manager_, scene_node_, vigir_footstep_planning_msgs::Foot::RIGHT, frame_id_property_->getString().toStdString()));
+  right_visual.reset(new StepVisual(scene_manager_, scene_node_, vigir_footstep_planning_msgs::Foot::RIGHT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes", frame_id_property_->getString().toStdString()));
   right_visual->createVisualAt( start.right.pose.position , start.right.pose.orientation);
   right_visual->setFramePosition(frame_position );
   right_visual->setFrameOrientation(frame_orientation );
   start_visuals_.push_back(right_visual);
 
   boost::shared_ptr<StepVisual> left_visual;
-  left_visual.reset(new StepVisual( scene_manager_, scene_node_, vigir_footstep_planning_msgs::Foot::LEFT, frame_id_property_->getString().toStdString() ));
+  left_visual.reset(new StepVisual( scene_manager_, scene_node_, vigir_footstep_planning_msgs::Foot::LEFT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes", frame_id_property_->getString().toStdString() ));
   left_visual->createVisualAt( start.left.pose.position, start.left.pose.orientation );
   left_visual->setFramePosition( frame_position );
   left_visual->setFrameOrientation( frame_orientation );
@@ -455,7 +470,6 @@ bool StepPlanDisplay::transformToFixedFrame(Ogre::Vector3& position, Ogre::Quate
 {
   if ( !context_->getFrameManager()->getTransform( header.frame_id,
                                                    header.stamp,
-
                                                    position, orientation))
   {
     ROS_INFO( "Error transforming from frame '%s' to frame '%s'",
@@ -475,12 +489,12 @@ void StepPlanDisplay::handleFeetPose(Ogre::Vector3 position, Ogre::Quaternion or
     panel_->handleGoalPose(position, orientation);
     return;
   case LEFT:
-    visual.reset(new StepVisual( scene_manager_, scene_node_,vigir_footstep_planning_msgs::Foot::LEFT,frame_id_property_->getString().toStdString(), step_visuals_.size()));
+    visual.reset(new StepVisual( scene_manager_, scene_node_,vigir_footstep_planning_msgs::Foot::LEFT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes", frame_id_property_->getString().toStdString(), step_visuals_.size()));
     if( step_plan_helper_)
       step_plan_helper_->addStep(frame_id_property_->getString().toStdString(), position, orientation,vigir_footstep_planning_msgs::Foot::LEFT, step_visuals_.size());
     break;
   case RIGHT:
-    visual.reset(new StepVisual( scene_manager_, scene_node_, vigir_footstep_planning_msgs::Foot::RIGHT, frame_id_property_->getString().toStdString(), step_visuals_.size()));
+    visual.reset(new StepVisual( scene_manager_, scene_node_, vigir_footstep_planning_msgs::Foot::RIGHT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes", frame_id_property_->getString().toStdString(), step_visuals_.size()));
     if( step_plan_helper_)
       step_plan_helper_->addStep(frame_id_property_->getString().toStdString(), position, orientation,vigir_footstep_planning_msgs::Foot::RIGHT, step_visuals_.size());
     break;
@@ -518,6 +532,8 @@ void StepPlanDisplay::visualizeStepCost()
       step_visuals_[i]->visualizeCost(0.5);
     }
   }
+  else
+    step_plan_helper_->checkSteps();
 }
 }
  // end namespace vigir_footstep_planning_rviz_plugin

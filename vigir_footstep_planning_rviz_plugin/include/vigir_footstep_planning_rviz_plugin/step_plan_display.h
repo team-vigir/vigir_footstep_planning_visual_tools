@@ -133,6 +133,10 @@ private:
   InteractionMode interaction_mode_;
 
   int last_step_index;
+
+  ros::NodeHandle nh;
+  std::string thor_dir;
+
 };
 
 } // end namespace vigir_footstep_planning_rviz_plugin

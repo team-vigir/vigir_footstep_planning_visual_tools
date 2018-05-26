@@ -27,6 +27,7 @@ public:
     // set request setting from display
     void setFrameID(const QString frame_id);
 
+
 public Q_SLOTS:
     // invoked from panel
     void resetValues();
@@ -36,6 +37,7 @@ public Q_SLOTS:
     void setCurrentStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan);
     //invoked from StepVisual
     void setLastStep(int last_index);
+    void setParameterSet(QString parameter_set_name);
 
 
 private Q_SLOTS:

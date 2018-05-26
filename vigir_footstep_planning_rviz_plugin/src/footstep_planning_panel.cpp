@@ -7,20 +7,20 @@
 
 namespace vigir_footstep_planning_rviz_plugin
 {
-FootstepPlanningPanel::FootstepPlanningPanel( QWidget* parent )
+FootstepPlanningPanel::FootstepPlanningPanel( std::string thor_dir, QWidget* parent )
   : QWidget( parent )
   , ui_(new Ui::PanelDesign)
 {
   ui_->setupUi(this);
   // set icons:
 // path relative to runtime directory
-  QIcon icon_left("./vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/footLeft.png");
+  QIcon icon_left(QString::fromStdString(thor_dir + "/src/vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/footLeft.png"));
   if(!icon_left.isNull())
     ui_->leftFootToolButton->setIcon(icon_left);
-  QIcon icon_right("./thor/src/vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/footRight.png");
+  QIcon icon_right(QString::fromStdString(thor_dir + "/src/vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/footRight.png"));
   if(!icon_right.isNull())
     ui_->rightFootToolButton->setIcon(icon_right);
-  QIcon icon_both("./thor/src/vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/bothFeet.png");
+  QIcon icon_both(QString::fromStdString(thor_dir + "/src/vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/bothFeet.png"));
   if(!icon_both.isNull())
     ui_->bothFeetToolButton->setIcon(icon_both);
 
@@ -46,6 +46,8 @@ FootstepPlanningPanel::FootstepPlanningPanel( QWidget* parent )
   connect(ui_->acceptPushButton, SIGNAL(clicked()), this, SIGNAL(acceptModifiedStepPlan()));
 
   connect(ui_->executePushButton, SIGNAL(clicked()), this, SIGNAL(executeRequested()));
+
+  connect(ui_->refreshParameterSetsToolButton, SIGNAL(clicked()), ui_->parameterSetComboBox, SLOT(updateParameterSetNames()));
 }
 
 
@@ -67,7 +69,7 @@ void FootstepPlanningPanel::makePatternConnections()
   connect(ui_->globalSequenceCheckBox, SIGNAL(toggled(bool)), ui_->patternWidget->ui->sequenceCheckBox, SLOT(setChecked(bool)));
   connect(ui_->patternWidget->ui->sequenceCheckBox, SIGNAL(toggled(bool)), ui_->planningWidget->ui->sequenceCheckBox, SLOT(setChecked(bool)));
 
-
+  connect(ui_->parameterSetComboBox, SIGNAL(currentTextChanged(QString)), ui_->patternWidget, SLOT(setParameterSet(QString)));
 }
 
 void FootstepPlanningPanel::makePlanningConnections()
@@ -93,6 +95,7 @@ void FootstepPlanningPanel::makePlanningConnections()
   connect(ui_->globalSequenceCheckBox, SIGNAL(toggled(bool)), ui_->planningWidget->ui->sequenceCheckBox, SLOT(setChecked(bool)));
   connect(ui_->planningWidget->ui->sequenceCheckBox, SIGNAL(toggled(bool)), ui_->patternWidget->ui->sequenceCheckBox, SLOT(setChecked(bool)));
 
+  connect(ui_->parameterSetComboBox, SIGNAL(currentTextChanged(QString)), ui_->planningWidget, SLOT(setParameterSet(QString)));
 }
 
 FootstepPlanningPanel::~FootstepPlanningPanel()

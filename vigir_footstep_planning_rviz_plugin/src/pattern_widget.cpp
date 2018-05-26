@@ -128,6 +128,11 @@ void PatternWidget::setFrameID(const QString frame_id)
   request_handler_->setFrameID(frame_id);
 }
 
+void PatternWidget::setParameterSet(QString parameter_set_name)
+{
+  request_handler_->setParameterSet(parameter_set_name);
+}
+
 // invoked from foot visual
 void PatternWidget::setLastStep(int last_index)
 {

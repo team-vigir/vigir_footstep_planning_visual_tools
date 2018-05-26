@@ -153,6 +153,7 @@ qt5_wrap_cpp(MOC_FILES
   include/${PROJECT_NAME}/widget_base.h
   include/${PROJECT_NAME}/property_widget.h
   include/${PROJECT_NAME}/step_plan_helper.h
+  include/${PROJECT_NAME}/parameter_set_combo_box.h
 )
 
 ## Specify additional locations of header files
@@ -170,6 +171,7 @@ set(HEADERS
   include/${PROJECT_NAME}/widget_base.h
   include/${PROJECT_NAME}/property_widget.h
   include/${PROJECT_NAME}/step_plan_helper.h
+  include/${PROJECT_NAME}/parameter_set_combo_box.h
   ${MOC_FILES}
 )
 
@@ -186,6 +188,7 @@ set(SOURCES
   src/widget_base.cpp
   src/property_widget.cpp
   src/step_plan_helper.cpp
+  src/parameter_set_combo_box.cpp
 )
 
 ## Declare a C++ library

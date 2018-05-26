@@ -10,6 +10,9 @@ StepPlanHelper::StepPlanHelper(QObject *parent)
   : QObject( parent )
   , edit_step_ac("/johnny5/footstep_planning/edit_step", true)
   , execute_step_plan_ac("/johnny5/step_control_module/execute_step_plan", true)
+  , update_step_plan_ac("/johnny5/footstep_planning/update_step_plan", true)
+  //, set_step_plan_ac(0)//("", true)
+ // , get_step_plan_ac(0)//("", true)
   , fixed_frame_("")
   , step_edited(false)
 {
@@ -30,7 +33,33 @@ void StepPlanHelper::setCurrentStepPlan(StepPlanMsg step_plan)
 {
   current_step_plan = step_plan;
   previous_step_plans.push_back(current_step_plan);
-  checkSteps();
+  /*
+  if(update_step_plan_ac.isServerConnected())
+  {
+    vigir_footstep_planning_msgs::UpdateStepPlanGoal goal;
+    goal.step_plan = step_plan;
+    goal.update_mode.mode = vigir_footstep_planning_msgs::UpdateMode::UPDATE_MODE_3D;
+    update_step_plan_ac.sendGoal(goal,
+                          boost::bind(&StepPlanHelper::updateStepPlanCallback, this, _1, _2),
+                          UpdateStepPlanActionClient::SimpleActiveCallback(),
+                          UpdateStepPlanActionClient::SimpleFeedbackCallback());
+  }
+  else
+  {
+    ROS_INFO("update step plan server not connected");
+  } */
+}
+
+void StepPlanHelper::updateStepPlanCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::UpdateStepPlanResultConstPtr& result)
+{
+  /*
+  ROS_INFO("updateStepPlanCallback();");
+  if(checkForErrors(result->status))
+    return;
+
+  current_step_plan = result->step_plan;
+  previous_step_plans.push_back(current_step_plan);
+  Q_EMIT(createdStepPlan(current_step_plan));*/
 }
 
 void StepPlanHelper::connectToActionServer()
@@ -43,16 +72,18 @@ void StepPlanHelper::connectToActionServer()
 
   bool connected = execute_step_plan_ac.waitForServer(ros::Duration(1,0));
   if(connected)
-    ROS_INFO("Connected to Action Server (/johnny5/footstep_planning/execute_step_plan)");
+    ROS_INFO("Connected to Action Server (/johnny5/step_control_module/execute_step_plan)");
   else
-    ROS_INFO("Could not connect to Action Server (/johnny5/footstep_planning/execute_step_plan)");
+    ROS_INFO("Could not connect to Action Server (/johnny5/step_control_module/execute_step_plan)");
 
+  if(update_step_plan_ac.waitForServer(ros::Duration(1,0)))
+    ROS_INFO("Connected to Action Server (/johnny5/footstep_planning/update_step_plan)");
+  else
+    ROS_INFO("Could not connect to Action Server (/johnny5/footstep_planning/update_step_plan)");
 }
-
 bool StepPlanHelper::checkConnection()
 {
   return edit_step_ac.isServerConnected();
-  //return false;
 }
 
 // Edit Step Update Foot
@@ -113,17 +144,17 @@ void StepPlanHelper::combineStepPlans(std::vector<StepPlanMsg>& step_plans)
 {
   if (step_plans.size() != 2)
   {
-    ROS_WARN("Function stitchStepPlans() only meant for stitching when one step is deleted.");
+    ROS_WARN("Function combineStepPlans() only meant for stitching when one step is deleted.");
     return;
   }
   vigir_footstep_planning::StepPlan result(step_plans[0]);
   vigir_footstep_planning_msgs::ErrorStatus error_status;
-  ROS_INFO("first step plan size: %i", step_plans[0].steps.size());
-  ROS_INFO("second step plan size: %i", step_plans[1].steps.size());
+  ROS_INFO("first step plan size: %i", (int)step_plans[0].steps.size());
+  ROS_INFO("second step plan size: %i", (int)step_plans[1].steps.size());
   for(int i = 0; i < step_plans[1].steps.size(); ++i)
   {
     step_plans[1].steps[i].step_index = i;
-    ROS_INFO("set index of 2nd plan to %i", step_plans[1].steps[i].step_index);
+    ROS_INFO("set index of 2nd plan to %i", (int) step_plans[1].steps[i].step_index);
   }
   error_status = result.appendStepPlan(step_plans[1]);
   if(checkForErrors(error_status))
@@ -132,7 +163,7 @@ void StepPlanHelper::combineStepPlans(std::vector<StepPlanMsg>& step_plans)
   result.toMsg(current_step_plan);
   previous_step_plans.push_back(current_step_plan);
   step_edited = false;
-  ROS_INFO("size prev step_plan: %i", previous_step_plans.size());
+  ROS_INFO("size prev step_plan: %i", (int)previous_step_plans.size());
   Q_EMIT(createdStepPlan(current_step_plan));
 }
 

@@ -60,11 +60,21 @@ void PlantFeetTool::onInitialize()
   Ogre::Vector3 posRight(-0.04,-0.093,0);
   Ogre::Vector3 scale(0.001,0.001,0.001);
   // -----------------------------------------------
+
+  std::string params_path;
+  ros::NodeHandle nh;
+  if (nh.getParam("/johnny5/footstep_planning/params_path", params_path))
+  {
+    thor_dir = params_path + "../../../../../..";
+  }
+  else
+    ROS_INFO("Could not retrieve thor directory");
+
   moving_feet_node_ = scene_manager_->getRootSceneNode()->createChildSceneNode();
 
-  moving_right_ = new StepVisual(scene_manager_,moving_feet_node_, vigir_footstep_planning_msgs::Foot::RIGHT);
+  moving_right_ = new StepVisual(scene_manager_,moving_feet_node_, vigir_footstep_planning_msgs::Foot::RIGHT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes");
   moving_right_->createVisualAt(posRight, Ogre::Quaternion(1,0,0,0));
-  moving_left_ = new StepVisual(scene_manager_, moving_feet_node_, vigir_footstep_planning_msgs::Foot::LEFT);
+  moving_left_ = new StepVisual(scene_manager_, moving_feet_node_, vigir_footstep_planning_msgs::Foot::LEFT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes");
   moving_left_->createVisualAt(posLeft, Ogre::Quaternion(1,0,0,0));
 
   moving_right_->setColor(0.0f,1.0f,0.0f,1.0f);
@@ -209,7 +219,7 @@ void PlantFeetTool::addGoalFeet(vigir_footstep_planning_msgs::Feet goal, Ogre::V
 {
   goal_visuals_.clear();
   boost::shared_ptr<StepVisual> right_visual;
-  right_visual.reset(new StepVisual(scene_manager_, scene_manager_->getRootSceneNode(), vigir_footstep_planning_msgs::Foot::RIGHT ));
+  right_visual.reset(new StepVisual(scene_manager_, scene_manager_->getRootSceneNode(), vigir_footstep_planning_msgs::Foot::RIGHT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes"));
   right_visual->createVisualAt( goal.right.pose.position , goal.right.pose.orientation);
   right_visual->setFramePosition(frame_position );
   right_visual->setFrameOrientation(frame_orientation );
@@ -217,7 +227,7 @@ void PlantFeetTool::addGoalFeet(vigir_footstep_planning_msgs::Feet goal, Ogre::V
   goal_visuals_.push_back(right_visual);
 
   boost::shared_ptr<StepVisual> left_visual;
-  left_visual.reset(new StepVisual( scene_manager_,  scene_manager_->getRootSceneNode(), vigir_footstep_planning_msgs::Foot::LEFT ));
+  left_visual.reset(new StepVisual( scene_manager_,  scene_manager_->getRootSceneNode(), vigir_footstep_planning_msgs::Foot::LEFT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes" ));
   left_visual->createVisualAt( goal.left.pose.position, goal.left.pose.orientation );
   left_visual->setFramePosition( frame_position );
   left_visual->setFrameOrientation( frame_orientation );

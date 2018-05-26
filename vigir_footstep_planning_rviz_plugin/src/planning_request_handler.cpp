@@ -152,7 +152,7 @@ void PlanningRequestHandler::appendStepPlan(StepPlanMsg add)
 
   for(int i = current_step_plan.steps.size()-1; i > last_step_index; --i)
   {
-    ROS_INFO("remove step %i", i);
+//    ROS_INFO("remove step %i", i);
     current.removeStep(i);
   }
   // step plan to last_step_index + step plan to replan_goal (or end)

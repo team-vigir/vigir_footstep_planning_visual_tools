@@ -31,7 +31,7 @@ class FootstepPlanningPanel: public QWidget
 {
 Q_OBJECT
 public:
-  FootstepPlanningPanel( QWidget* parent = 0 );
+  FootstepPlanningPanel(std::string thor_dir, QWidget* parent = 0 );
   ~FootstepPlanningPanel();
   void save( rviz::Config config ) const;
   void load( const rviz::Config& config );

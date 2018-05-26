@@ -52,7 +52,7 @@ class StepVisual: public QObject
 Q_OBJECT
 public:
   // default index=-1 for goal and start visuals, which are not part of step_plan.steps
-  StepVisual( Ogre::SceneManager* scene_manager, Ogre::SceneNode* parent_node, unsigned int which_foot, std::string frame_id = "", int index=-1);
+  StepVisual( Ogre::SceneManager* scene_manager, Ogre::SceneNode* parent_node, unsigned int which_foot, std::string mesh_dir, std::string frame_id = "", int index=-1);
   virtual ~StepVisual();
 
   // create visual functions
@@ -128,6 +128,8 @@ private:
   float cost;
   float risk;
   vigir_footstep_planning_msgs::Step current_step;
+
+  std::string mesh_dir_;
 
 };
 

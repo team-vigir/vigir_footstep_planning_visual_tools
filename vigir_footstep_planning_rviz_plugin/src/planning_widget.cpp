@@ -14,8 +14,11 @@ PlanningWidget::PlanningWidget(QWidget *parent) :
 
     // ui signals
     connect(ui->planningSetGoalToolButton, SIGNAL(toggled(bool)), this, SLOT(emitFeetToolActivated(bool)));
-    connect(ui->startFootComboBox, SIGNAL(currentIndexChanged(int)), request_handler_, SLOT(setStartFoot(int)));
 
+    connect(ui->startFootComboBox, SIGNAL(currentIndexChanged(int)), request_handler_, SLOT(setStartStepIndex(int)));
+    connect(ui->maxNofStepsSpinBox, SIGNAL(valueChanged(int)), request_handler_, SLOT(setMaxNofSteps(int)));
+    connect(ui->maxTimeDoubleSpinBox, SIGNAL(valueChanged(double)), request_handler_, SLOT(setMaxPlanningTime(double)));
+    connect(ui->ratioDoubleSpinBox, SIGNAL(valueChanged(double)), request_handler_, SLOT(setMaxPathLengthRatio(double)));
 }
 
 PlanningWidget::~PlanningWidget()
@@ -63,6 +66,11 @@ void PlanningWidget::setFrameID(const QString frame_id)
   request_handler_->setFrameID(frame_id);
 }
 
+void PlanningWidget::setParameterSet(QString parameter_set_name)
+{
+  request_handler_->setParameterSet(parameter_set_name);
+}
+
 // invoked from foot visual
 void PlanningWidget::setLastStep(int last_index)
 {
@@ -98,21 +106,6 @@ void PlanningWidget::on_planningComputeCommandLinkButton_clicked()
 void PlanningWidget::emitFeetToolActivated(bool activated)
 {
   Q_EMIT(feetToolActivated(activated));
-}
-
-void PlanningWidget::on_maxTimeDoubleSpinBox_valueChanged(double arg1)
-{
-
-}
-
-void PlanningWidget::on_maxNofStepsDoubleSpinBox_valueChanged(double arg1)
-{
-
-}
-
-void PlanningWidget::on_ratioDoubleSpinBox_valueChanged(double arg1)
-{
-
 }
 
 

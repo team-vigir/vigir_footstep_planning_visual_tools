@@ -73,6 +73,7 @@ public Q_SLOTS:
   void setCurrentGoal(int last_index);
   //start_foot_selection = RequestMsg::RIGHT or RequestMsg::LEFT
   void setStartFoot(int start_foot_selection);
+  void setParameterSet(QString parameter_set_name);
 
 Q_SIGNALS:
   void createdStepPlan(vigir_footstep_planning_msgs::StepPlan s);

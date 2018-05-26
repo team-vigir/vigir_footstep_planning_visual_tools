@@ -90,6 +90,8 @@ private:
   boost::circular_buffer<boost::shared_ptr<StepVisual> > goal_visuals_;
   void addGoalFeet(vigir_footstep_planning_msgs::Feet goal, Ogre::Vector3 frame_position, Ogre::Quaternion frame_orientation);
   bool interaction3D;
+  std::string thor_dir;
+
 Q_SIGNALS:
   void feetDropped(Ogre::Vector3 position, Ogre::Quaternion orientation, PlantFeetMode mode);
   void activateTool(bool activate);

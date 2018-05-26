@@ -28,11 +28,10 @@ public:
     // set request setting from display
     void setFrameID(const QString frame_id);
 
+
 private Q_SLOTS:
     void on_planningComputeCommandLinkButton_clicked();
-    void on_maxTimeDoubleSpinBox_valueChanged(double arg1);
-    void on_maxNofStepsDoubleSpinBox_valueChanged(double arg1);
-    void on_ratioDoubleSpinBox_valueChanged(double arg1);
+    void setParameterSet(QString parameter_set_name);
 
 public Q_SLOTS:
 // invoked from Display

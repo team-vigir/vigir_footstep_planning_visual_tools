@@ -95,6 +95,15 @@ void RequestHandlerBase::setStartFoot(int start_foot_selection)
   request_->start_foot_selection = start_foot_selection;
 }
 
+void RequestHandlerBase::setParameterSet(QString parameter_set_name)
+{
+  if(parameter_set_name == "default")
+    request_->parameter_set_name.data = "";
+  else
+    request_->parameter_set_name.data = parameter_set_name.toStdString();
+}
+
+
 // ---- set request_handler members: ---
 void RequestHandlerBase::setFeedbackRequested(bool requested)
 {
@@ -237,7 +246,7 @@ void RequestHandlerBase::setCurrentGoalCallback(const actionlib::SimpleClientGoa
 // add a step plan
 void RequestHandlerBase::addStepPlan()
 {
-  ROS_INFO("last step index: %i" , last_step_index);
+  //ROS_INFO("last step index: %i" , last_step_index);
 
   //copy current request (to not change start of original request)
   RequestMsg nextRequest = *request_;
@@ -282,12 +291,18 @@ void RequestHandlerBase::appendStepPlan(StepPlanMsg add)
 {
 
   vigir_footstep_planning::StepPlan current(current_step_plan);
+  vigir_footstep_planning::StepPlan append(add);
 
   for(int i = current_step_plan.steps.size()-1; i > last_step_index; --i)
   {
     ROS_INFO("remove step %i", i);
     current.removeStep(i);
   }
+  /*
+   * For pattern_planning: remove first step of next step plan
+   * */
+  append.removeStep(0); // test remove first step (todo)
+  append.toMsg(add);
 
   ErrorStatusMsg error_status = current.appendStepPlan(add);
 

@@ -23,7 +23,7 @@ using namespace interactive_markers;
 namespace vigir_footstep_planning_rviz_plugin
 {
 
-StepVisual::StepVisual( Ogre::SceneManager* scene_manager, Ogre::SceneNode* parent_node, unsigned int which_foot, std::string frame_id, int index):
+StepVisual::StepVisual( Ogre::SceneManager* scene_manager, Ogre::SceneNode* parent_node, unsigned int which_foot, std::string mesh_dir, std::string frame_id, int index):
   scene_manager_(scene_manager),
   foot_index(which_foot),
   index(index),
@@ -32,7 +32,9 @@ StepVisual::StepVisual( Ogre::SceneManager* scene_manager, Ogre::SceneNode* pare
   frame_id_(frame_id),
   interaction_mode_(PLANE),
   cost(0),
-  risk(0)
+  risk(0),
+  interactive_marker_server_(0),
+  mesh_dir_(mesh_dir)
 {
   frame_node_ = parent_node->createChildSceneNode();
   foot_.reset(new rviz::MeshShape(scene_manager_, frame_node_));
@@ -50,6 +52,11 @@ StepVisual::StepVisual( Ogre::SceneManager* scene_manager, Ogre::SceneNode* pare
 
 StepVisual::~StepVisual()
 {
+  if(interaction)
+  {
+    eraseInteractiveMarkers();
+    interactive_marker_server_->applyChanges();
+  }
   // Destroy the frame node since we don't need it anymore.
  scene_manager_->destroySceneNode( frame_node_ );
  delete stl_loader_;
@@ -68,12 +75,12 @@ void StepVisual::createVisualAt(const Ogre::Vector3& position, const Ogre::Quate
 
   if(foot_index == FootMsg::LEFT)
   {
-    createFootMesh("./thor/src/thor/robotis/common/thormang3_description/meshes/robotis_l_leg_foot.stl");
+    createFootMesh(mesh_dir_ + "/robotis_l_leg_foot.stl");
     foot_->setColor(1.0 , 0.0 , 0.0 , 0.9);
   }
   if(foot_index == FootMsg::RIGHT)
   {
-    createFootMesh("./thor/src/thor/robotis/common/thormang3_description/meshes/robotis_r_leg_foot.stl");
+    createFootMesh(mesh_dir_ + "/robotis_r_leg_foot.stl");
     foot_->setColor(0.0 , 1.0 , 0.0 , 0.9);
   }
   foot_->setPosition(position+origin);
@@ -82,7 +89,7 @@ void StepVisual::createVisualAt(const Ogre::Vector3& position, const Ogre::Quate
 
 void StepVisual::createVisualAt(const geometry_msgs::Point& foot_position, const geometry_msgs::Quaternion& foot_orientation)
 {
-  Ogre::Vector3	p(foot_position.x, foot_position.y, foot_position.z/*-0.085*/); //0.85 z-value in step_plan message of all feet.
+  Ogre::Vector3	p(foot_position.x, foot_position.y, foot_position.z); //0.85 z-value in step_plan message of all feet.
   Ogre::Quaternion o(foot_orientation.w, foot_orientation.x, foot_orientation.y, foot_orientation.z);
 
   createVisualAt(p, o);
@@ -126,16 +133,20 @@ void StepVisual::setColor( float r, float g, float b, float a )
 void StepVisual::createFootMesh(const std::string& path)
 {
   stl_loader_ = new ogre_tools::STLLoader();
-  stl_loader_->load(path);
-  foot_->beginTriangles();
-  for (unsigned i=0; i < stl_loader_->triangles_.size(); i++)
+  if(stl_loader_->load(path))
   {
-    ogre_tools::STLLoader::Triangle & t = stl_loader_->triangles_[i];
-    foot_->addVertex(t.vertices_[0],t.normal_);
-    foot_->addVertex(t.vertices_[1],t.normal_);
-    foot_->addVertex(t.vertices_[2],t.normal_);
+    foot_->beginTriangles();
+    for (unsigned i=0; i < stl_loader_->triangles_.size(); i++)
+    {
+      ogre_tools::STLLoader::Triangle & t = stl_loader_->triangles_[i];
+      foot_->addVertex(t.vertices_[0],t.normal_);
+      foot_->addVertex(t.vertices_[1],t.normal_);
+      foot_->addVertex(t.vertices_[2],t.normal_);
+    }
+    foot_->endTriangles();
   }
-  foot_->endTriangles();
+  else
+    ROS_ERROR("Could not load mesh at %s", path.c_str());
 }
 
 void StepVisual::setVisible(bool visible)
@@ -151,12 +162,15 @@ void StepVisual::processInteractionFeedback(const visualization_msgs::Interactiv
 {
   if(feedback->event_type == visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE)
   {
-    foot_->setPosition(Ogre::Vector3( feedback->pose.position.x, feedback->pose.position.y, feedback->pose.position.z ));
+    foot_->setPosition(Ogre::Vector3( feedback->pose.position.x, feedback->pose.position.y, feedback->pose.position.z));
     foot_->setOrientation(Ogre::Quaternion(feedback->pose.orientation.w, feedback->pose.orientation.x, feedback->pose.orientation.y, feedback->pose.orientation.z ));
     if(index>=0)
       text_node_->setPosition(Ogre::Vector3( feedback->pose.position.x, feedback->pose.position.y, feedback->pose.position.z ));
 
-    current_step.foot.pose = feedback->pose;
+    current_step.foot.pose.position.x = feedback->pose.position.x;
+    current_step.foot.pose.position.y = feedback->pose.position.y;
+    current_step.foot.pose.position.z = feedback->pose.position.z-0.0275;
+    current_step.foot.pose.orientation = feedback->pose.orientation;
 
     vigir_footstep_planning_msgs::EditStep edit;
     edit.header.stamp = ros::Time::now();
