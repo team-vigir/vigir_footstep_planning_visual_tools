@@ -8,6 +8,8 @@
 #include <vigir_footstep_planning_rviz_plugin/plant_feet_tool.h>
 #include <OgreQuaternion.h>
 #include <OgreVector3.h>
+#include "../../../../../build/vigir_footstep_planning_rviz_plugin/ui_paneldesign.h"
+
 
 #endif
 
@@ -31,7 +33,7 @@ class FootstepPlanningPanel: public QWidget
 {
 Q_OBJECT
 public:
-  FootstepPlanningPanel(std::string thor_dir, QWidget* parent = 0 );
+  FootstepPlanningPanel(QWidget* parent = 0 );
   ~FootstepPlanningPanel();
   void save( rviz::Config config ) const;
   void load( const rviz::Config& config );
@@ -40,11 +42,11 @@ public:
   void setFrameID(const QString frame_id);
   void handleGoalPose(Ogre::Vector3 position, Ogre::Quaternion orientation);
   void releasePlaceFeet();
+  Ui::PanelDesign* ui_;
 
 public Q_SLOTS:
   void setStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan);
 private:
-  Ui::PanelDesign* ui_;
   void makePatternConnections();
   void makePlanningConnections();
 private Q_SLOTS:
@@ -77,7 +79,6 @@ Q_SIGNALS:
   void resetValues();
   void clearIM();
   void undo();
-  void acceptModifiedStepPlan();
   void interactionModeChanged(int interaction_mode);
   void executeRequested();
   // pass through of RequestHandlerBase signals (PlanningRequestHandler + PatternRequestHandler)

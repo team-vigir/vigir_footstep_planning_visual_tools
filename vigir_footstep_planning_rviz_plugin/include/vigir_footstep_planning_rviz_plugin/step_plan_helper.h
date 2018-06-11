@@ -14,6 +14,7 @@
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::EditStepAction> EditStepActionClient;
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::ExecuteStepPlanAction> ExecuteStepPlanActionClient;
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::UpdateStepPlanAction> UpdateStepPlanActionClient;
+typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::UpdateFootAction> UpdateFootActionClient;
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::SetStepPlanAction> SetStepPlanActionClient;
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::GetStepPlanAction> GetStepPlanActionClient;
 
@@ -42,24 +43,34 @@ public:
   bool checkConnection();
   void addStep(const std::string& frame_id, const Ogre::Vector3& position, const Ogre::Quaternion& orientation, unsigned int which_foot, unsigned int step_index);
   void checkSteps();
+  void connectToActionServer();
+  void setUpdateStepPlanPositions(bool update);
 
 public Q_SLOTS:
   void editStep(vigir_footstep_planning_msgs::EditStep edit_step);
   void executeStepPlan();
   void setCurrentStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan);
-  void updateFoot(vigir_footstep_planning_msgs::Foot foot, unsigned int step_index);
   void setRobotPose(Ogre::Vector3 position, Ogre::Quaternion orientation);
-  void setFixedFrame(QString fixed_frame);
+  void setFrameID(QString frameID);
   void setPreviousStepPlan();
   void acceptModifiedStepPlan();
+  void updateStepPlanPositions();
+  void updateStepPlanCost();
+
 Q_SIGNALS:
   void stepValidUpdate(unsigned int step_index, bool valid);
   void createdStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan);
+  void updatedStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan); //todo
+  void actionClientConnected(QString name, bool connected);
+  void displayError(QString message);
+  void displayInfo(QString message);
+  void displaySuccess(QString message);
 
 private:
-  void connectToActionServer();
   void editStepCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::EditStepResultConstPtr& result);
   void executeStepPlanCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::ExecuteStepPlanResultConstPtr& result);
+  void executeStepPlanFeedbackCallback(const vigir_footstep_planning_msgs::ExecuteStepPlanFeedbackConstPtr& feedback);
+  void updateStepPlan(vigir_footstep_planning_msgs::UpdateMode update_mode);
   void updateStepPlanCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::UpdateStepPlanResultConstPtr& result);
   void combineStepPlans(std::vector<StepPlanMsg>& step_plans);
   bool checkForErrors(ErrorStatusMsg error_status);
@@ -73,14 +84,18 @@ private:
   EditStepActionClient edit_step_ac;
   ExecuteStepPlanActionClient execute_step_plan_ac;
   UpdateStepPlanActionClient update_step_plan_ac;
+  UpdateFootActionClient update_foot_ac;
 //  SetStepPlanActionClient set_step_plan_ac;
  // GetStepPlanActionClient get_step_plan_ac;
 
 
-  std::string fixed_frame_;
+  std::string frame_id;
 
-  bool step_edited; //true when current_step_plan is different to back() of previous_step_plans
-
+// For Status Messages:
+  int execution_state;
+  int last_performed_step;
+// ------
+  bool update_positions;
 };
 
 

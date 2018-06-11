@@ -25,11 +25,6 @@ void PropertyWidget::initialize()
   setHeaderLabels(labels);
 }
 
-void PropertyWidget::addStep(const unsigned int& index)
-{
-
-}
-
 void PropertyWidget::addProperty(QTreeWidgetItem *parent, const QString& property_name, const QString& property_value)
 {
   QTreeWidgetItem *property_item = new QTreeWidgetItem(parent);

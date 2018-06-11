@@ -19,7 +19,6 @@ public:
 
     void initialize();
 
-    void addStep(const unsigned int& index);
     void addStep(const vigir_footstep_planning_msgs::Step& index);
 
 public Q_SLOTS:

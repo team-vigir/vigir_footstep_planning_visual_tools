@@ -1,3 +1,4 @@
+
 #ifndef STEP_PLAN_DISPLAY_H
 #define STEP_PLAN_DISPLAY_H
 
@@ -64,7 +65,6 @@ public:
 
 protected:
   virtual void onInitialize() override;
-  virtual void fixedFrameChanged() override;
   virtual void update(float wall_dt, float ros_dt) override; // called periodically from visualization manager
 
 public Q_SLOTS:
@@ -88,6 +88,9 @@ private Q_SLOTS:
   void visualizeReplan(int end);
   void handleFeetPose(Ogre::Vector3 position, Ogre::Quaternion orientation, PlantFeetMode mode);
   void visualizeStepCost();
+  void setUpdateStepPlan();
+  void updateStepVisuals(vigir_footstep_planning_msgs::StepPlan updated_step_plan);
+
 
 
 Q_SIGNALS:
@@ -106,6 +109,8 @@ private:
   void addStartFeet(const vigir_footstep_planning_msgs::Feet& start, const Ogre::Vector3& frame_position, const Ogre::Quaternion& frame_orientation);
   void displaySteps(const std::vector<vigir_footstep_planning_msgs::Step>& steps, const Ogre::Vector3& frame_position, const Ogre::Quaternion& frame_orientation);
   bool transformToFixedFrame(Ogre::Vector3& position, Ogre::Quaternion& orientation, const std_msgs::Header& header);
+  void getParameters();
+
   boost::circular_buffer<boost::shared_ptr<StepVisual> > step_visuals_;
   boost::circular_buffer<boost::shared_ptr<StepVisual> > start_visuals_;
 
@@ -118,13 +123,14 @@ private:
   rviz::StatusProperty* ac_connected_;
   rviz::BoolProperty* visualize_valid_;
   rviz::BoolProperty* visualize_cost_;
+  rviz::BoolProperty* update_step_plan_positions_;
 
   FootstepPlanningPanel* panel_;
   rviz::ToolManager* tool_manager_;
   PlantFeetTool* feet_tool_;
   int index_feet_tool;
   rviz::Tool* interact_tool_;
-  rviz::InteractiveMarkerDisplay* interactive_marker_display_;
+ // rviz::InteractiveMarkerDisplay* interactive_marker_display_;
   // handles interactive markers created in StepVisual
   interactive_markers::InteractiveMarkerServer* interactive_marker_server_;
   bool displayFeedback;
@@ -134,9 +140,8 @@ private:
 
   int last_step_index;
 
+  // Parameters:
   ros::NodeHandle nh;
-  std::string thor_dir;
-
 };
 
 } // end namespace vigir_footstep_planning_rviz_plugin

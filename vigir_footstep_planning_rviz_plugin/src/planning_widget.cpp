@@ -9,7 +9,6 @@ PlanningWidget::PlanningWidget(QWidget *parent) :
     ui(new Ui::PlanningWidget)
 {
     ui->setupUi(this);
-    ui->moreOptionsGroupBox->setChecked(false);
     request_handler_ = new PlanningRequestHandler();
 
     // ui signals
@@ -25,6 +24,14 @@ PlanningWidget::~PlanningWidget()
 {
   delete ui;
   delete request_handler_;
+}
+
+void PlanningWidget::initialize()
+{
+  ui->moreOptionsGroupBox->setChecked(false);
+
+  //todo
+  // request_handler_->initialize();
 }
 
 void PlanningWidget::save( rviz::Config config ) const

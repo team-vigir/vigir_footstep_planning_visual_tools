@@ -10,7 +10,6 @@ ParameterSetComboBox::ParameterSetComboBox(QWidget *parent) :
 {
   this->addItem("default");
   this->setCurrentIndex(0);
-  initialize();
 }
 
 ParameterSetComboBox::~ParameterSetComboBox()
@@ -21,9 +20,9 @@ ParameterSetComboBox::~ParameterSetComboBox()
 void ParameterSetComboBox::initialize()
 {
   if(parameter_set_ac.waitForServer(ros::Duration(1,0)))
-    ROS_INFO("Connected to Action Server (/johnny5/footstep_planning/params/get_all_parameter_sets)");
+    Q_EMIT(actionClientConnected( "/johnny5/footstep_planning/params/get_all_parameter_sets", true));
   else
-    ROS_INFO("Could not connect to Action Server (/johnny5/footstep_planning/params/get_all_parameter_sets)");
+    Q_EMIT(actionClientConnected( "/johnny5/footstep_planning/params/get_all_parameter_sets", false));
 
   updateParameterSetNames();
 }

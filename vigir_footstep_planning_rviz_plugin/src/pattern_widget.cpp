@@ -11,8 +11,6 @@ PatternWidget::PatternWidget(QWidget *parent) :
     ui->setupUi(this);
     request_handler_ = new PatternRequestHandler();
 
-    ui->patternMoreOptionsCheckbox->setChecked(false);
-
     //Pattern Planning Parameter Signal Slot connection, set request handler values --------------------------
     connect(ui->patternNOStepsSpinBox,SIGNAL(valueChanged(int)), request_handler_, SLOT(setNoSteps(int)));
     connect(ui->patternStepDistanceSpinBox,SIGNAL(valueChanged(double)), request_handler_, SLOT(setStepDistance(double)));
@@ -35,6 +33,12 @@ PatternWidget::~PatternWidget()
 {
   delete ui;
   delete request_handler_;
+}
+
+void PatternWidget::initialize()
+{
+  request_handler_->initialize();
+  ui->patternMoreOptionsCheckbox->setChecked(false);
 }
 
 void PatternWidget::save( rviz::Config config ) const

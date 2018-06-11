@@ -27,7 +27,7 @@ public:
     void load( const rviz::Config& config );
     // set request setting from display
     void setFrameID(const QString frame_id);
-
+    void initialize();
 
 private Q_SLOTS:
     void on_planningComputeCommandLinkButton_clicked();

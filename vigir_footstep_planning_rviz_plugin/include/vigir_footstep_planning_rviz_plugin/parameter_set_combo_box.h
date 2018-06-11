@@ -21,6 +21,9 @@ public:
     ~ParameterSetComboBox();
 
     void initialize();
+Q_SIGNALS:
+    void actionClientConnected(QString name, bool connected);
+
 private Q_SLOTS:
     void updateParameterSetNames();
 

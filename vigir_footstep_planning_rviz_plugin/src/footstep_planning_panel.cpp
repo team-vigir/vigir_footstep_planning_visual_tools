@@ -2,27 +2,48 @@
 #include <vigir_footstep_planning_rviz_plugin/footstep_planning_panel.h>
 #include <rviz/config.h>
 #include <QIcon>
-#include "../../../../../build/vigir_footstep_planning_rviz_plugin/ui_paneldesign.h"
 
 
 namespace vigir_footstep_planning_rviz_plugin
 {
-FootstepPlanningPanel::FootstepPlanningPanel( std::string thor_dir, QWidget* parent )
+FootstepPlanningPanel::FootstepPlanningPanel( QWidget* parent )
   : QWidget( parent )
   , ui_(new Ui::PanelDesign)
 {
   ui_->setupUi(this);
+  // Status Prompt output connections:
+  connect(ui_->parameterSetComboBox, SIGNAL(actionClientConnected(QString, bool)), ui_->messageDisplay, SLOT( displayConnection(QString, bool)));
+  connect(ui_->patternWidget->request_handler_, SIGNAL(actionClientConnected(QString, bool)), ui_->messageDisplay, SLOT( displayConnection(QString, bool)));
+  connect(ui_->planningWidget->request_handler_, SIGNAL(actionClientConnected(QString, bool)), ui_->messageDisplay, SLOT( displayConnection(QString, bool)));
+
+  connect(ui_->patternWidget->request_handler_, SIGNAL(displayInfo(QString)), ui_->messageDisplay, SLOT(displayMessage(QString)));
+  connect(ui_->patternWidget->request_handler_, SIGNAL(displayError(QString)), ui_->messageDisplay, SLOT(displayError(QString)));
+  connect(ui_->patternWidget->request_handler_, SIGNAL(displaySuccess(QString)), ui_->messageDisplay, SLOT(displaySuccess(QString)));
+
+  connect(ui_->planningWidget->request_handler_, SIGNAL(displayInfo(QString)), ui_->messageDisplay, SLOT(displayMessage(QString)));
+  connect(ui_->planningWidget->request_handler_, SIGNAL(displayError(QString)), ui_->messageDisplay, SLOT(displayError(QString)));
+  connect(ui_->planningWidget->request_handler_, SIGNAL(displaySuccess(QString)), ui_->messageDisplay, SLOT(displaySuccess(QString)));
+  // ---
+  ui_->parameterSetComboBox->initialize();
+  ui_->patternWidget->initialize();
+  ui_->planningWidget->initialize();
+
   // set icons:
-// path relative to runtime directory
-  QIcon icon_left(QString::fromStdString(thor_dir + "/src/vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/footLeft.png"));
-  if(!icon_left.isNull())
-    ui_->leftFootToolButton->setIcon(icon_left);
-  QIcon icon_right(QString::fromStdString(thor_dir + "/src/vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/footRight.png"));
-  if(!icon_right.isNull())
-    ui_->rightFootToolButton->setIcon(icon_right);
-  QIcon icon_both(QString::fromStdString(thor_dir + "/src/vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/bothFeet.png"));
-  if(!icon_both.isNull())
-    ui_->bothFeetToolButton->setIcon(icon_both);
+  ros::NodeHandle nh;
+  std::string icons_path;
+  if(nh.getParam("icons_path", icons_path))
+  {
+    QIcon icon_left(QString::fromStdString(icons_path + "footLeft.png"));
+    if(!icon_left.isNull())
+      ui_->leftFootToolButton->setIcon(icon_left);
+    QIcon icon_right(QString::fromStdString(icons_path + "footRight.png"));
+    if(!icon_right.isNull())
+      ui_->rightFootToolButton->setIcon(icon_right);
+    QIcon icon_both(QString::fromStdString(icons_path + "bothFeet.png"));
+    if(!icon_both.isNull())
+      ui_->bothFeetToolButton->setIcon(icon_both);
+  }
+
 
   //ui_->moreOptionsGroupBox->setChecked(false);
   ui_->patternWidget->ui->sequenceCheckBox->setVisible(false);
@@ -43,11 +64,11 @@ FootstepPlanningPanel::FootstepPlanningPanel( std::string thor_dir, QWidget* par
   connect(ui_->interactionModeComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(emitInteractionModeChanged(int)));
 
   connect(ui_->undoPushButton, SIGNAL(clicked()), this, SIGNAL(undo()));
-  connect(ui_->acceptPushButton, SIGNAL(clicked()), this, SIGNAL(acceptModifiedStepPlan()));
 
   connect(ui_->executePushButton, SIGNAL(clicked()), this, SIGNAL(executeRequested()));
 
   connect(ui_->refreshParameterSetsToolButton, SIGNAL(clicked()), ui_->parameterSetComboBox, SLOT(updateParameterSetNames()));
+
 }
 
 

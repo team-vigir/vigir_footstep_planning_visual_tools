@@ -21,6 +21,9 @@ public:
     ~PatternWidget();
     Ui::PatternWidget *ui;
     PatternRequestHandler* request_handler_;
+
+    void initialize();
+
     // save and load ui
     void save( rviz::Config config ) const;
     void load( const rviz::Config& config );

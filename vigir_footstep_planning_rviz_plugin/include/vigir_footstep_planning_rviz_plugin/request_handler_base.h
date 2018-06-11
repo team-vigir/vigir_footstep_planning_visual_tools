@@ -52,6 +52,8 @@ public:
   GenerateFeetPoseActionClient generate_feet_ac;
   vigir_footstep_planning_msgs::StepPlan current_step_plan;
 
+  void initialize();
+
   bool checkConnection();
   void sendRequest();
   void cancelGoals();
@@ -79,6 +81,10 @@ Q_SIGNALS:
   void createdStepPlan(vigir_footstep_planning_msgs::StepPlan s);
   void receivedPlanningFeedback(vigir_footstep_planning_msgs::PlanningFeedback feedback);
   void startFeetAnswer(vigir_footstep_planning_msgs::Feet start);
+  void actionClientConnected(QString name, bool connected);
+  void displayError(QString message);
+  void displayInfo(QString message);
+  void displaySuccess(QString message);
 
 private:
   bool feedback_requested_;

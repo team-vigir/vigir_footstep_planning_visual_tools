@@ -1,0 +1,8 @@
+### stl of feet ########################################################
+foot_mesh:
+  left:  "robotis_l_leg_foot.stl"
+  right: "robotis_r_leg_foot.stl"
+
+foot_mesh_properties:
+  origin: {x: 0, y: 0, z: 0.0275}
+  scale: {x: 0.001, y: 0.001, z: 0.001}

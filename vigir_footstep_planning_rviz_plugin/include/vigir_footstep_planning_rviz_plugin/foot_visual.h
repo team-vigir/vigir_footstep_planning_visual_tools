@@ -52,8 +52,10 @@ class StepVisual: public QObject
 Q_OBJECT
 public:
   // default index=-1 for goal and start visuals, which are not part of step_plan.steps
-  StepVisual( Ogre::SceneManager* scene_manager, Ogre::SceneNode* parent_node, unsigned int which_foot, std::string mesh_dir, std::string frame_id = "", int index=-1);
+  StepVisual( Ogre::SceneManager* scene_manager, Ogre::SceneNode* parent_node, unsigned int which_foot, std::string frame_id="", int index=-1);
   virtual ~StepVisual();
+
+  void getParameters();
 
   // create visual functions
   void createByMessage(const vigir_footstep_planning_msgs::Step msg);
@@ -65,17 +67,21 @@ public:
   void setFramePosition( const Ogre::Vector3& position );
   void setFrameOrientation( const Ogre::Quaternion& orientation );
   void setPosition(const Ogre::Vector3& position );
+  void setOrientation(const Ogre::Quaternion& orientation);
 
   void setColor( float r, float g, float b, float a );
   void setVisible(bool visible);
   void displayIndex(bool visible);
   void visualizeCost(float max);
 
+  void updateStep(const vigir_footstep_planning_msgs::Step updated_msg);
 
 Q_SIGNALS:
   void stepEdited(vigir_footstep_planning_msgs::EditStep edit);
   void cutStepPlanHere(int index);
   void replanToHere(int index);
+  void updateStepsPos();
+  void footDropped();
 
 public Q_SLOTS:
   void setValid(bool valid);
@@ -111,10 +117,12 @@ private:
 
   ogre_tools::STLLoader* stl_loader_;
 
+  std::string current_im_name;
   InteractionMode interaction_mode_;
   interactive_markers::InteractiveMarkerServer* interactive_marker_server_;
   interactive_markers::MenuHandler menu_handler;
   interactive_markers::MenuHandler::EntryHandle mode_begin; //= InteractionMode::NONE
+  bool snap_to_valid;
 
   rviz::MovableText* text_;
   Ogre::SceneNode* text_node_;
@@ -129,7 +137,13 @@ private:
   float risk;
   vigir_footstep_planning_msgs::Step current_step;
 
-  std::string mesh_dir_;
+  std::string mesh_resource;
+
+  Ogre::Vector3 scale_; //(0.001,0.001,0.001);
+  Ogre::Vector3 origin_; //(0,0,0.0275);
+
+  void normalizeQuaternion(geometry_msgs::Quaternion& orientation);
+
 
 };
 

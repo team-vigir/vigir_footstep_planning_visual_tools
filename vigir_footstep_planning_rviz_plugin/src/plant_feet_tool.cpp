@@ -24,6 +24,8 @@ PlantFeetTool::PlantFeetTool()
   , mode(BOTH)
   , interactive_marker_server_(NULL)
   , interaction3D(false)
+  , posLeft(0,0.1,0)
+  , posRight(0,-0.1,0)
 {
 }
 
@@ -53,28 +55,16 @@ void PlantFeetTool::setInteractiveMarkerServer(interactive_markers::InteractiveM
 // scene at this point.
 void PlantFeetTool::onInitialize()
 {
+  setFeetPos();
   goal_visuals_.rset_capacity(2); // Todo: for way points higher capacity
   display_dir_ = true;
-  // Werte die mit Parametern ersetzt werden müssen:
-  Ogre::Vector3 posLeft(-0.04,0.093,0); //Todo: wie setzt sich die 0.04 zusammen?
-  Ogre::Vector3 posRight(-0.04,-0.093,0);
-  Ogre::Vector3 scale(0.001,0.001,0.001);
+
   // -----------------------------------------------
-
-  std::string params_path;
-  ros::NodeHandle nh;
-  if (nh.getParam("/johnny5/footstep_planning/params_path", params_path))
-  {
-    thor_dir = params_path + "../../../../../..";
-  }
-  else
-    ROS_INFO("Could not retrieve thor directory");
-
   moving_feet_node_ = scene_manager_->getRootSceneNode()->createChildSceneNode();
 
-  moving_right_ = new StepVisual(scene_manager_,moving_feet_node_, vigir_footstep_planning_msgs::Foot::RIGHT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes");
+  moving_right_ = new StepVisual(scene_manager_,moving_feet_node_, vigir_footstep_planning_msgs::Foot::RIGHT);
   moving_right_->createVisualAt(posRight, Ogre::Quaternion(1,0,0,0));
-  moving_left_ = new StepVisual(scene_manager_, moving_feet_node_, vigir_footstep_planning_msgs::Foot::LEFT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes");
+  moving_left_ = new StepVisual(scene_manager_, moving_feet_node_, vigir_footstep_planning_msgs::Foot::LEFT);
   moving_left_->createVisualAt(posLeft, Ogre::Quaternion(1,0,0,0));
 
   moving_right_->setColor(0.0f,1.0f,0.0f,1.0f);
@@ -126,8 +116,6 @@ void PlantFeetTool::updateMovingFeetVisibility()
       moving_right_->setPosition(Ogre::Vector3(0.0f,0.0f,0.0f));
       break;
     case BOTH:
-      Ogre::Vector3 posLeft(-0.04,0.093,0); //Todo: wie setzt sich die 0.04 zusammen?
-      Ogre::Vector3 posRight(-0.04,-0.093,0);
       moving_left_->setVisible(true);
       moving_right_->setVisible(true);
       moving_left_->setPosition(posLeft);
@@ -200,6 +188,46 @@ int PlantFeetTool::processKeyEvent(QKeyEvent *event, rviz::RenderPanel *panel)
   return Render;
 }
 
+void PlantFeetTool::setFeetPos()
+{
+  float seperation;
+  float frame_x;
+  float frame_y;
+  float frame_z;
+  ros::NodeHandle nh;
+  if (nh.getParam("/johnny5/footstep_planning/foot/separation", seperation)
+      && nh.getParam("/johnny5/footstep_planning/foot/left/foot_frame/x", frame_x)
+      && nh.getParam("/johnny5/footstep_planning/foot/left/foot_frame/y", frame_y)
+      && nh.getParam("/johnny5/footstep_planning/foot/left/foot_frame/z", frame_z)
+      )
+  {
+    posLeft.x = frame_x;
+    posLeft.y = seperation/2 - frame_y;
+    posLeft.z = frame_z;
+    if(   nh.getParam("/johnny5/footstep_planning/foot/right/foot_frame/x", frame_x)
+       && nh.getParam("/johnny5/footstep_planning/foot/right/foot_frame/y", frame_y)
+       && nh.getParam("/johnny5/footstep_planning/foot/right/foot_frame/z", frame_z)
+       )
+    {
+      posRight.x = frame_x;
+      posRight.y = -seperation/2 - frame_y;
+      posRight.z = frame_z;
+    }
+  }
+  else
+    ROS_INFO("Could not retrieve feet positioning from /johnny5/footstep_planning/foot/");
+}
+
+void PlantFeetTool::update(float wall_dt, float ros_dt)
+{
+//  if()
+//  {
+//    setFeetPos();
+//  }
+}
+
+
+
 void PlantFeetTool::addGoalFeet(vigir_footstep_planning_msgs::Feet goal)
 {
   Ogre::Vector3 position;
@@ -219,7 +247,7 @@ void PlantFeetTool::addGoalFeet(vigir_footstep_planning_msgs::Feet goal, Ogre::V
 {
   goal_visuals_.clear();
   boost::shared_ptr<StepVisual> right_visual;
-  right_visual.reset(new StepVisual(scene_manager_, scene_manager_->getRootSceneNode(), vigir_footstep_planning_msgs::Foot::RIGHT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes"));
+  right_visual.reset(new StepVisual(scene_manager_, scene_manager_->getRootSceneNode(), vigir_footstep_planning_msgs::Foot::RIGHT));
   right_visual->createVisualAt( goal.right.pose.position , goal.right.pose.orientation);
   right_visual->setFramePosition(frame_position );
   right_visual->setFrameOrientation(frame_orientation );
@@ -227,7 +255,7 @@ void PlantFeetTool::addGoalFeet(vigir_footstep_planning_msgs::Feet goal, Ogre::V
   goal_visuals_.push_back(right_visual);
 
   boost::shared_ptr<StepVisual> left_visual;
-  left_visual.reset(new StepVisual( scene_manager_,  scene_manager_->getRootSceneNode(), vigir_footstep_planning_msgs::Foot::LEFT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes" ));
+  left_visual.reset(new StepVisual( scene_manager_,  scene_manager_->getRootSceneNode(), vigir_footstep_planning_msgs::Foot::LEFT ));
   left_visual->createVisualAt( goal.left.pose.position, goal.left.pose.orientation );
   left_visual->setFramePosition( frame_position );
   left_visual->setFrameOrientation( frame_orientation );
@@ -344,6 +372,7 @@ InteractiveMarkerMsg PlantFeetTool::makeInteractiveMarker()
   im.pose.position.y = pos.y;
   im.pose.position.z = pos.z;
   Ogre::Quaternion orient = moving_feet_node_->getOrientation();
+  orient.normalise();
   im.pose.orientation.w = orient.w;
   im.pose.orientation.x = orient.x;
   im.pose.orientation.y = orient.y;
@@ -360,6 +389,7 @@ void PlantFeetTool::addSixDOFControl(InteractiveMarkerMsg& im)
   control.orientation.x = 1;
   control.orientation.y = 0;
   control.orientation.z = 0;
+  normalizeQuaternion(control.orientation);
   control.name = "rotate_x";
   control.interaction_mode = InteractiveMarkerControlMsg::ROTATE_AXIS;
   im.controls.push_back(control);
@@ -372,6 +402,7 @@ void PlantFeetTool::addSixDOFControl(InteractiveMarkerMsg& im)
   control.orientation.x = 0;
   control.orientation.y = 0;
   control.orientation.z = 1;
+  normalizeQuaternion(control.orientation);
   control.name = "rotate_y";
   control.interaction_mode = InteractiveMarkerControlMsg::ROTATE_AXIS;
   im.controls.push_back(control);
@@ -384,6 +415,7 @@ void PlantFeetTool::addSixDOFControl(InteractiveMarkerMsg& im)
   control.orientation.x = 0;
   control.orientation.y = 1;
   control.orientation.z = 0;
+  normalizeQuaternion(control.orientation);
   control.name = "rotate_z";
   control.interaction_mode = InteractiveMarkerControlMsg::ROTATE_AXIS;
   im.controls.push_back(control);
@@ -411,6 +443,7 @@ void PlantFeetTool::addPlaneControl(InteractiveMarkerMsg& im)
   plane_control.orientation.x = 0;
   plane_control.orientation.y = 1;
   plane_control.orientation.z = 0;
+  normalizeQuaternion(plane_control.orientation);
   // Rotate
   plane_control.name = "rotate_xy";
   plane_control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
@@ -487,6 +520,16 @@ void PlantFeetTool::enableSixDOFInteraction()
   interactive_marker_server_->insert(im, boost::bind(&PlantFeetTool::processInteractionFeedback, this, _1));
   menu_handler.apply( *interactive_marker_server_, im.name );
   interactive_marker_server_->applyChanges();
+}
+
+void PlantFeetTool::normalizeQuaternion(geometry_msgs::Quaternion& orientation)
+{
+  Ogre::Quaternion o(orientation.w, orientation.x, orientation.y, orientation.z);
+  o.normalise();
+  orientation.w = o.w;
+  orientation.x = o.x;
+  orientation.y = o.y;
+  orientation.z = o.z;
 }
 
 

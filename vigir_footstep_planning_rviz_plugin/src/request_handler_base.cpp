@@ -12,11 +12,9 @@ RequestHandlerBase::RequestHandlerBase(QObject* parent)
   , generate_feet_ac("/johnny5/footstep_planning/generate_feet_pose", true)
   , last_step_index(0)
   , replan_goal_index(0)
+  , feedback_requested_(false)
 {
   request_ = new vigir_footstep_planning_msgs::StepPlanRequest();
-  setFrameID(""); //default
-  connectToActionServer();
-  feedback_requested_=false;
   qRegisterMetaType<vigir_footstep_planning_msgs::StepPlan>("vigir_footstep_planning_msgs::StepPlan");
   qRegisterMetaType<vigir_footstep_planning_msgs::PlanningFeedback>("vigir_footstep_planning_msgs::PlanningFeedback");
   qRegisterMetaType<vigir_footstep_planning_msgs::Feet>("vigir_footstep_planning_msgs::Feet");
@@ -26,6 +24,12 @@ RequestHandlerBase::RequestHandlerBase(QObject* parent)
 RequestHandlerBase::~RequestHandlerBase()
 {
   delete request_;
+}
+
+void RequestHandlerBase::initialize()
+{
+  setFrameID(""); //default
+  connectToActionServer();
 }
 
 // ----- Send simple Planning / Pattern Request -----
@@ -47,12 +51,12 @@ void RequestHandlerBase::resultCallback(const actionlib::SimpleClientGoalState& 
 {
   if(result->status.error == vigir_footstep_planning_msgs::ErrorStatus::NO_ERROR)
   {
-    ROS_INFO("No errors, set current step plan");
+    Q_EMIT(displaySuccess(QString("No errors, set current step plan.")));
     setCurrentStepPlan(result->step_plan);
     Q_EMIT(createdStepPlan(result->step_plan));
   }
   else{
-    ROS_INFO("Errors during computation of step plan. %s", result->status.error_msg.c_str());
+    Q_EMIT(displayError(QString("Errors during computation of step plan. ") + QString::fromStdString(result->status.error_msg)));
   }
 }
 
@@ -67,7 +71,7 @@ void RequestHandlerBase::feedbackCallback(const vigir_footstep_planning_msgs::St
 
 void RequestHandlerBase::cancelGoals()
 {
- ROS_INFO("cancel");
+  Q_EMIT(displayInfo("cancel step_plan_request action."));
   ac.cancelAllGoals();
 //  generate_feet_ac.cancelAllGoals();
 }
@@ -122,17 +126,16 @@ void RequestHandlerBase::setCurrentStepPlan(const StepPlanMsg& step_plan)
 void RequestHandlerBase::connectToActionServer()
 {
   bool connected = ac.waitForServer(ros::Duration(1,0));
-  if(!connected)
-  {
-    ROS_INFO("Could not connect to Action Server. (/johnny5/footstep_planning/step_plan_request)");
-  }
+  if(connected)
+    Q_EMIT(actionClientConnected("/johnny5/footstep_planning/step_plan_request", true));
   else
-  {
-    ROS_INFO("Connected to Action Server. (/johnny5/footstep_planning/step_plan_request)");
-    connected = generate_feet_ac.waitForServer(ros::Duration(1,0));
-    if(!connected) ROS_WARN("Could not connect to Action Server (/vigir_footstep_planning/generate_feet_pose");
-    else ROS_INFO("Connected to Action Server. (/johnny5/footstep_planning/generate_feet_pose");
-  }
+    Q_EMIT(actionClientConnected("/johnny5/footstep_planning/step_plan_request", false));
+
+  connected = generate_feet_ac.waitForServer(ros::Duration(1,0));
+  if(connected)
+    Q_EMIT(actionClientConnected("/johnny5/footstep_planning/generate_feet_pose", true));
+  else
+    Q_EMIT(actionClientConnected("/johnny5/footstep_planning/generate_feet_pose", false));
 }
 
 bool RequestHandlerBase::checkConnection()
@@ -164,14 +167,13 @@ void RequestHandlerBase::startPoseCallback(const actionlib::SimpleClientGoalStat
   {
     if(result->status.warning != ErrorStatusMsg::NO_WARNING)
     {
-      ROS_WARN("%s", result->status.warning_msg.c_str());
+      Q_EMIT(displayError(QString::fromStdString(result->status.warning_msg)));
     }
     Q_EMIT(startFeetAnswer(result->feet));
-    request_->start = result->feet;
   }
   else{
-    ROS_ERROR("%s", result->status.error_msg.c_str());
-    ROS_WARN("Defaulting start pose to origin");
+    Q_EMIT(displayError(QString::fromStdString(result->status.error_msg.c_str())));
+    Q_EMIT(displayInfo(QString("Defaulting start pose to origin")));
 
     vigir_footstep_planning_msgs::GenerateFeetPoseGoal goal;
     goal.request.header.stamp = ros::Time::now();
@@ -196,7 +198,7 @@ void RequestHandlerBase::setCurrentGoal(int last_index)
 {
   if(current_step_plan.steps.size() <= last_index)
   {
-    ROS_ERROR("Last index %i invalid, maximum %i is allowed", last_index, (int)current_step_plan.steps.size());
+    //ROS_ERROR("Last index %i invalid, maximum %i is allowed", last_index, (int)current_step_plan.steps.size());
     return;
   }
   last_step_index = last_index;
@@ -233,12 +235,13 @@ void RequestHandlerBase::setCurrentGoalCallback(const actionlib::SimpleClientGoa
   {
     if(result->status.warning != ErrorStatusMsg::NO_WARNING)
     {
-      ROS_WARN("%s", result->status.warning_msg.c_str());
+      Q_EMIT(displayError(QString::fromStdString(result->status.warning_msg)));
     }
     current_step_plan.goal = result->feet;
   }
-  else{
-    ROS_ERROR("%s", result->status.error_msg.c_str());
+  else
+  {
+    Q_EMIT(displayError(QString::fromStdString(result->status.error_msg)));
   }
 }
 // --------------
@@ -283,7 +286,7 @@ void RequestHandlerBase::addStepPlanCallback(const actionlib::SimpleClientGoalSt
   }
   else
   {
-    ROS_INFO("Errors during computation of step plan. %s", result->status.error_msg.c_str());
+    Q_EMIT(displayError(QString("Errors during computation of step plan. ") + QString::fromStdString(result->status.error_msg)));
   }
 }
 
@@ -295,7 +298,8 @@ void RequestHandlerBase::appendStepPlan(StepPlanMsg add)
 
   for(int i = current_step_plan.steps.size()-1; i > last_step_index; --i)
   {
-    ROS_INFO("remove step %i", i);
+    Q_EMIT(displayInfo(QString("Step was removed")));
+    //ROS_INFO("remove step %i", i);
     current.removeStep(i);
   }
   /*
@@ -314,7 +318,7 @@ void RequestHandlerBase::appendStepPlan(StepPlanMsg add)
     Q_EMIT(createdStepPlan(step_plan));
   }
   else
-    ROS_ERROR("%s", error_status.error_msg.c_str());
+    Q_EMIT(displayError(QString::fromStdString(error_status.error_msg)));
 }
 
 

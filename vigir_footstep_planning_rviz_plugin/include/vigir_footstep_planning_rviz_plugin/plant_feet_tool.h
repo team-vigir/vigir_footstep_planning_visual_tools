@@ -56,6 +56,8 @@ public:
   virtual int processMouseEvent( rviz::ViewportMouseEvent& event );
   virtual int processKeyEvent (QKeyEvent *event, rviz::RenderPanel *panel);
 
+  virtual void update(float wall_dt, float ros_dt);
+
   void setMode(PlantFeetMode mode);
   void setInteractiveMarkerServer(interactive_markers::InteractiveMarkerServer* server);
 
@@ -70,6 +72,7 @@ private:
   StepVisual* moving_right_;
   rviz::Arrow* show_dir_;
   bool display_dir_;
+
   void updateMovingFeetVisibility();
 
   interactive_markers::InteractiveMarkerServer* interactive_marker_server_;
@@ -90,7 +93,15 @@ private:
   boost::circular_buffer<boost::shared_ptr<StepVisual> > goal_visuals_;
   void addGoalFeet(vigir_footstep_planning_msgs::Feet goal, Ogre::Vector3 frame_position, Ogre::Quaternion frame_orientation);
   bool interaction3D;
-  std::string thor_dir;
+
+  void setFeetPos();
+
+  Ogre::Vector3 posLeft;
+  Ogre::Vector3 posRight;
+  Ogre::Vector3 scale;
+
+  void normalizeQuaternion(geometry_msgs::Quaternion& orientation);
+
 
 Q_SIGNALS:
   void feetDropped(Ogre::Vector3 position, Ogre::Quaternion orientation, PlantFeetMode mode);

@@ -30,6 +30,7 @@ StepPlanDisplay::StepPlanDisplay()
   , interaction_mode_(PLANE)
   , last_step_index(0)
   , index_feet_tool(-1)
+  , step_plan_helper_(0)
 {
   qRegisterMetaType<vigir_footstep_planning_msgs::Step>("vigir_footstep_planning_msgs::Step");
 
@@ -51,27 +52,37 @@ StepPlanDisplay::~StepPlanDisplay()
 
 void StepPlanDisplay::onInitialize()
 {
-  // Get thor_dir:
-  thor_dir = "";
-  std::string params_path;
-  if (nh.getParam("/johnny5/footstep_planning/params_path", params_path))
-  {
-    thor_dir = params_path + "../../../../../..";
-    ROS_INFO("%s", thor_dir.c_str());
-  }
-  else
-  {
-    ROS_INFO("Could not retrieve thor directory.");
-  }
 
-  setIcon(QIcon(QString::fromStdString(thor_dir + "/src/vigir/vigir_footstep_planning/vigir_footstep_planning_visual_tools/vigir_footstep_planning_rviz_plugin/media/bothFeet.png")));
+
+
+
+
+  // Get parameters:
+  getParameters();
+  // set icon:
+  std::string icons_path;
+  if(nh.getParam("icons_path", icons_path))
+  setIcon(QIcon(QString::fromStdString(icons_path + "bothFeet.png")));
   step_visuals_.rset_capacity(100);
   start_visuals_.rset_capacity(2);
 
-  panel_= new FootstepPlanningPanel(thor_dir);
+  panel_= new FootstepPlanningPanel();
   this->setAssociatedWidget (panel_);
 
+
   step_plan_helper_= new StepPlanHelper();
+
+  // Status Prompt Connections:
+  connect( step_plan_helper_, SIGNAL(actionClientConnected(QString, bool)), panel_->ui_->messageDisplay, SLOT( displayConnection(QString, bool)));
+  connect( step_plan_helper_, SIGNAL(displayError(QString)), panel_->ui_->messageDisplay, SLOT( displayError(QString)));
+  connect( step_plan_helper_, SIGNAL(displayInfo(QString)), panel_->ui_->messageDisplay, SLOT( displayMessage(QString)));
+  connect( step_plan_helper_, SIGNAL(displaySuccess(QString)), panel_->ui_->messageDisplay, SLOT( displaySuccess(QString)));
+
+
+
+  // ---------------------------
+
+  step_plan_helper_->connectToActionServer();
 
   tool_manager_ = context_->getToolManager();
 
@@ -84,13 +95,13 @@ void StepPlanDisplay::onInitialize()
     feet_tool_->setInteractiveMarkerServer(interactive_marker_server_);
 
   rviz::DisplayGroup* display_group = context_->getRootDisplayGroup();
-  interactive_marker_display_ = (rviz::InteractiveMarkerDisplay*) display_group->createDisplay("rviz/InteractiveMarkers");
-  interactive_marker_display_->initialize(context_);
-  interactive_marker_display_->subProp("Update Topic")->setValue("/foot_marker/update");
-  display_group->addChild(interactive_marker_display_);
-  interactive_marker_display_->setName("Step Plan Interaction");
-  bool connected_edit_step = step_plan_helper_ ? step_plan_helper_->checkConnection() : false;
-  interactive_marker_display_->setEnabled(connected_edit_step);
+ // interactive_marker_display_ = (rviz::InteractiveMarkerDisplay*) display_group->createDisplay("rviz/InteractiveMarkers");
+ // interactive_marker_display_->initialize(context_);
+ // interactive_marker_display_->subProp("Update Topic")->setValue("foot_marker/update");
+ // display_group->addChild(interactive_marker_display_);
+ // interactive_marker_display_->setName("Step Plan Interaction");
+  //bool connected_edit_step = step_plan_helper_ ? step_plan_helper_->checkConnection() : false;
+ // interactive_marker_display_->setEnabled(connected_edit_step);
 
   makeConnections();
 
@@ -119,6 +130,10 @@ void StepPlanDisplay::initializeDisplayProperties()
                                           false,
                                           "Display current robot pose",
                                           this, SLOT(setStartVisible()));
+  update_step_plan_positions_ = new rviz::BoolProperty("Update 3D",
+                                                      false,
+                                                      "Updates 3D position when a new step plan is created or changed.",
+                                                      this, SLOT(setUpdateStepPlan()));
   visualize_valid_ = new rviz::BoolProperty("Visualize invalid steps",
                                             true,
                                             "Marks invalid steps gray",
@@ -186,8 +201,11 @@ void StepPlanDisplay::makeConnections()
 void StepPlanDisplay::makeStepVisualConnections(const StepVisual* visual)
 {
   if(step_plan_helper_)
+  {
     connect(visual, SIGNAL(stepEdited(vigir_footstep_planning_msgs::EditStep)), step_plan_helper_, SLOT(editStep(vigir_footstep_planning_msgs::EditStep)));
-
+    connect(visual, SIGNAL(updateStepsPos()), step_plan_helper_, SLOT(updateStepPlanPositions()));
+    connect(visual, SIGNAL(footDropped()), step_plan_helper_, SLOT(acceptModifiedStepPlan()));
+  }
   connect(panel_, SIGNAL(clearIM()), visual, SLOT(setButtonInteractiveMarker()));
   connect(visual, SIGNAL(cutStepPlanHere(int)), this, SLOT(visualizeCut(int)));
   connect(visual, SIGNAL(cutStepPlanHere(int)),panel_, SLOT(setLastStep(int)) );
@@ -202,10 +220,12 @@ void StepPlanDisplay::makeStepPlanHelperConnections()
   connect( step_plan_helper_, SIGNAL( createdStepPlan( vigir_footstep_planning_msgs::StepPlan ) ), this, SLOT( displayStepPlan( vigir_footstep_planning_msgs::StepPlan ) ));
   connect( step_plan_helper_, SIGNAL(createdStepPlan(vigir_footstep_planning_msgs::StepPlan)), panel_, SLOT( setStepPlan(vigir_footstep_planning_msgs::StepPlan)));
 
+  connect( step_plan_helper_, SIGNAL(updatedStepPlan(vigir_footstep_planning_msgs::StepPlan)), panel_, SLOT( setStepPlan(vigir_footstep_planning_msgs::StepPlan)));
+  connect( step_plan_helper_, SIGNAL(updatedStepPlan(vigir_footstep_planning_msgs::StepPlan)), this, SLOT(updateStepVisuals(vigir_footstep_planning_msgs::StepPlan)));
+
   // step_plan_helper functions
   connect(panel_, SIGNAL(undo()), step_plan_helper_, SLOT(setPreviousStepPlan()));
   connect (step_plan_helper_, SIGNAL(stepValidUpdate(unsigned int, bool )), this, SLOT(setStepValid(unsigned int, bool )));
-  connect(panel_, SIGNAL(acceptModifiedStepPlan()), step_plan_helper_, SLOT(acceptModifiedStepPlan()));
 
   // execute
   connect(panel_, SIGNAL(executeRequested()), step_plan_helper_, SLOT(executeStepPlan()));
@@ -216,16 +236,11 @@ void StepPlanDisplay::update(float wall_dt, float ros_dt)
   updateACConnected();
 }
 
-void StepPlanDisplay::fixedFrameChanged()
-{
-  if(step_plan_helper_)
-    step_plan_helper_->setFixedFrame(fixed_frame_);
-}
-
-
 void StepPlanDisplay::updateFrameID()
 {
   panel_->setFrameID(frame_id_property_->getString());
+  if(step_plan_helper_)
+    step_plan_helper_->setFrameID(frame_id_property_->getString());
 }
 
 void StepPlanDisplay::displayIndex()
@@ -245,7 +260,6 @@ void StepPlanDisplay::reset()
 
 void StepPlanDisplay::displayStepPlan(const vigir_footstep_planning_msgs::StepPlan& step_plan)
 {
-  //ROS_INFO("display step plan");
   last_step_index = step_plan.steps.size();
 
   Ogre::Quaternion orientation;
@@ -257,7 +271,8 @@ void StepPlanDisplay::displayStepPlan(const vigir_footstep_planning_msgs::StepPl
     addStartFeet(step_plan.start, position, orientation);
     displaySteps(step_plan.steps, position, orientation);
     setStartVisible();
-   // visualizeStepCost(); todo
+    if(visualize_cost_->getBool())
+      visualizeStepCost();
     if(feet_tool_)
       feet_tool_->reset(); // dont show goal
   }
@@ -270,8 +285,9 @@ void StepPlanDisplay::displaySteps(const std::vector<vigir_footstep_planning_msg
   for (unsigned i = 0; i< steps.size(); i++)
   {
     boost::shared_ptr<StepVisual> visual;
-    visual.reset(new StepVisual( scene_manager_, scene_node_, steps[i].foot.foot_index , thor_dir + "/src/thor/robotis/common/thormang3_description/meshes", steps[i].header.frame_id, steps[i].step_index));
-    visual->createByMessage( steps[i] );
+    visual.reset(new StepVisual( scene_manager_, scene_node_, steps[i].foot.foot_index, steps[i].header.frame_id, steps[i].step_index));
+
+    visual->createByMessage( steps[i]);
     visual->setFramePosition( frame_position );
     visual->setFrameOrientation( frame_orientation );
     visual->displayIndex(displIndex);
@@ -322,30 +338,26 @@ void StepPlanDisplay::addStartFeet(const vigir_footstep_planning_msgs::Feet& sta
 {
   start_visuals_.clear();
   boost::shared_ptr<StepVisual> right_visual;
-  right_visual.reset(new StepVisual(scene_manager_, scene_node_, vigir_footstep_planning_msgs::Foot::RIGHT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes", frame_id_property_->getString().toStdString()));
+  right_visual.reset(new StepVisual(scene_manager_, scene_node_, vigir_footstep_planning_msgs::Foot::RIGHT, frame_id_property_->getString().toStdString()));
   right_visual->createVisualAt( start.right.pose.position , start.right.pose.orientation);
   right_visual->setFramePosition(frame_position );
   right_visual->setFrameOrientation(frame_orientation );
   start_visuals_.push_back(right_visual);
 
   boost::shared_ptr<StepVisual> left_visual;
-  left_visual.reset(new StepVisual( scene_manager_, scene_node_, vigir_footstep_planning_msgs::Foot::LEFT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes", frame_id_property_->getString().toStdString() ));
+  left_visual.reset(new StepVisual( scene_manager_, scene_node_, vigir_footstep_planning_msgs::Foot::LEFT, frame_id_property_->getString().toStdString() ));
   left_visual->createVisualAt( start.left.pose.position, start.left.pose.orientation );
   left_visual->setFramePosition( frame_position );
   left_visual->setFrameOrientation( frame_orientation );
   start_visuals_.push_back(left_visual);
 
-  setStartVisible();
+  start_visuals_[0]->setVisible(display_start_->getBool());
+  start_visuals_[1]->setVisible(display_start_->getBool());
 }
 
 void StepPlanDisplay::setStartVisible()
 {
-  if(start_visuals_.size() == 2){
-    start_visuals_[0]->setVisible(display_start_->getBool());
-    start_visuals_[1]->setVisible(display_start_->getBool());
-  }
-  else
-    Q_EMIT(requestStartPose());
+  Q_EMIT(requestStartPose());
 }
 
 void StepPlanDisplay::updateDisplay(int from, int to)
@@ -369,7 +381,14 @@ void StepPlanDisplay::visualizeFeedback(vigir_footstep_planning_msgs::PlanningFe
   if(display_feedback_->getBool())
   {
     displayFeedback = true;
-    displayStepPlan(feedback.current_step_plan);
+    Ogre::Quaternion orientation;
+    Ogre::Vector3 position;
+
+    if(transformToFixedFrame(position, orientation, feedback.current_step_plan.header))
+    {
+      step_visuals_.clear();
+      displaySteps(feedback.current_step_plan.steps, position, orientation);
+    }
   }
 }
 
@@ -390,8 +409,11 @@ void StepPlanDisplay::updateACConnected()
   }
   else if(connected_step_plan) // only stepPlanRequest possible
   {
-    ac_connected_->setLevel((rviz::StatusProperty::Level) 1); // todo: rviz::StatusProperty::Level::WARN
-    ac_connected_->setValue("Action Client for StepPlanRequest Action is connected. EditStep Action not!");
+    if(false/*interactive_marker_display_->isEnabled()*/)
+    {
+      ac_connected_->setLevel((rviz::StatusProperty::Level) 1); // todo: rviz::StatusProperty::Level::WARN
+      ac_connected_->setValue("Action Client for EditStep Action is not connected.");
+    }
   }
   else
   {
@@ -431,7 +453,6 @@ void StepPlanDisplay::checkTool(rviz::Tool* tool)
 
 void StepPlanDisplay::setStepValid(unsigned int index, bool valid)
 {
- // if(visualize_valid_->getBool()) todo
   if(!visualize_cost_->getBool())
     step_visuals_[index]->setValid(valid);
 }
@@ -489,12 +510,12 @@ void StepPlanDisplay::handleFeetPose(Ogre::Vector3 position, Ogre::Quaternion or
     panel_->handleGoalPose(position, orientation);
     return;
   case LEFT:
-    visual.reset(new StepVisual( scene_manager_, scene_node_,vigir_footstep_planning_msgs::Foot::LEFT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes", frame_id_property_->getString().toStdString(), step_visuals_.size()));
+    visual.reset(new StepVisual( scene_manager_, scene_node_,vigir_footstep_planning_msgs::Foot::LEFT, frame_id_property_->getString().toStdString(), step_visuals_.size()));
     if( step_plan_helper_)
       step_plan_helper_->addStep(frame_id_property_->getString().toStdString(), position, orientation,vigir_footstep_planning_msgs::Foot::LEFT, step_visuals_.size());
     break;
   case RIGHT:
-    visual.reset(new StepVisual( scene_manager_, scene_node_, vigir_footstep_planning_msgs::Foot::RIGHT, thor_dir + "/src/thor/robotis/common/thormang3_description/meshes", frame_id_property_->getString().toStdString(), step_visuals_.size()));
+    visual.reset(new StepVisual( scene_manager_, scene_node_, vigir_footstep_planning_msgs::Foot::RIGHT, frame_id_property_->getString().toStdString(), step_visuals_.size()));
     if( step_plan_helper_)
       step_plan_helper_->addStep(frame_id_property_->getString().toStdString(), position, orientation,vigir_footstep_planning_msgs::Foot::RIGHT, step_visuals_.size());
     break;
@@ -508,7 +529,6 @@ void StepPlanDisplay::handleFeetPose(Ogre::Vector3 position, Ogre::Quaternion or
     makeStepVisualConnections(visual.get());
     step_visuals_.push_back(visual);
   }
-
 }
 void StepPlanDisplay::setInteractionMode(int interaction_mode)
 {
@@ -529,12 +549,38 @@ void StepPlanDisplay::visualizeStepCost()
   {
     for(unsigned int i = 0; i < step_visuals_.size(); ++i)
     {
-      step_visuals_[i]->visualizeCost(0.5);
+      // use parameter: default step cost: const_step_cost_estimator: step_cost: 0.1
+      step_visuals_[i]->visualizeCost(0.3);
     }
   }
   else
     step_plan_helper_->checkSteps();
 }
+
+void StepPlanDisplay::getParameters()
+{
+
+}
+
+void StepPlanDisplay::setUpdateStepPlan()
+{
+  step_plan_helper_->setUpdateStepPlanPositions(update_step_plan_positions_->getBool());
+}
+
+void StepPlanDisplay::updateStepVisuals(vigir_footstep_planning_msgs::StepPlan updated_step_plan)
+{
+  if(step_visuals_.size() != updated_step_plan.steps.size())
+  {
+    ROS_ERROR("Cannot update step plan because of size mismatch");
+  }
+  for (unsigned int i = 0; i < updated_step_plan.steps.size(); ++i)
+  {
+    step_visuals_[i]->updateStep(updated_step_plan.steps[i]);
+  }
+
+  // todo update Values in property widget
+}
+
 }
  // end namespace vigir_footstep_planning_rviz_plugin
 
