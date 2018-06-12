@@ -42,6 +42,7 @@ StepVisual::StepVisual( Ogre::SceneManager* scene_manager,
   , origin_(0.0f,0.0f,0.0f)
   , current_im_name("")
   , snap_to_valid(false)
+  , current_marker(0)
 {
   frame_node_ = parent_node->createChildSceneNode();
   foot_.reset(new rviz::MeshShape(scene_manager_, frame_node_));
@@ -175,10 +176,6 @@ void StepVisual::setPosition( const Ogre::Vector3& position)
     text_node_->setPosition(position+origin_);
   }
   foot_->setPosition(position+origin_);
-  if(interaction) //update pose of active interactive marker
-  {
-    //todo
-  }
 }
 
 void StepVisual::setOrientation( const Ogre::Quaternion& orientation)
@@ -424,6 +421,7 @@ visualization_msgs::Marker StepVisual::makeMarker(bool transparent)
   marker.color.g = foot_index == FootMsg::RIGHT ? 1 : 0;
   marker.color.b = 0;
   marker.color.a = transparent? 0 : 0.1;
+  current_marker = &marker;
   return marker;
 }
 
@@ -659,6 +657,38 @@ void StepVisual::updateStep(const vigir_footstep_planning_msgs::Step updated_msg
   current_step = updated_msg;
   cost = updated_msg.cost;
   risk = updated_msg.risk;
+
+  this->setValid(updated_msg.valid);
+
+  if(interaction) // update position of interactive marker by making new interactive marker
+  {
+    // check current interaction:
+    MenuHandler::CheckState state;
+    menu_handler.getCheckState(mode_begin, state);
+    if(state == MenuHandler::CHECKED)
+    {
+      setButtonInteractiveMarker();
+      return;
+    }
+    menu_handler.getCheckState(mode_begin + PLANE, state);
+    if(state == MenuHandler::CHECKED)
+    {
+      setPlaneInteractiveMarker();
+      return;
+    }
+    menu_handler.getCheckState(mode_begin + SIXDOF, state);
+    if(state == MenuHandler::CHECKED)
+    {
+      setSixDOFInteractiveMarker();
+      return;
+    }
+    menu_handler.getCheckState(mode_begin + FULLSIXDOF, state);
+    if(state == MenuHandler::CHECKED)
+    {
+      setFullSixDOFInteractiveMarker();
+      return;
+    }
+  }
 }
 
 

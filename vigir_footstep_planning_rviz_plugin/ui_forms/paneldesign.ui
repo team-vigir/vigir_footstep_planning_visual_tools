@@ -75,6 +75,9 @@
         <property name="text">
          <string>Undo (Ctrl+Z)</string>
         </property>
+        <property name="icon">
+         <iconset theme="undo"/>
+        </property>
         <property name="shortcut">
          <string>Ctrl+Z</string>
         </property>
@@ -125,7 +128,7 @@
       <item row="0" column="1">
        <widget class="QPushButton" name="clearIMPushButton">
         <property name="text">
-         <string>Clear Interaction</string>
+         <string>Clear Interaction (Esc)</string>
         </property>
         <property name="shortcut">
          <string>Esc</string>

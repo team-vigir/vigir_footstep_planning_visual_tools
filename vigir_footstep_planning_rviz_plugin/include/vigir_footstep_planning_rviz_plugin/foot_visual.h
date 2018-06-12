@@ -120,6 +120,8 @@ private:
   std::string current_im_name;
   InteractionMode interaction_mode_;
   interactive_markers::InteractiveMarkerServer* interactive_marker_server_;
+  //visualization_msgs::InteractiveMarker* current_im_;
+  visualization_msgs::Marker* current_marker;
   interactive_markers::MenuHandler menu_handler;
   interactive_markers::MenuHandler::EntryHandle mode_begin; //= InteractionMode::NONE
   bool snap_to_valid;
