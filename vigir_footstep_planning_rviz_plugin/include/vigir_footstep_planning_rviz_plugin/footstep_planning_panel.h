@@ -54,15 +54,18 @@ private Q_SLOTS:
   void releaseSetGoalToggle(bool released);
   void on_displayStepsFromSpinBox_valueChanged(int arg1);
   void on_displayStepsToSpinBox_valueChanged(int arg1);
-  void on_reset_pushButton_clicked();
-  void on_clearIMPushButton_clicked();
+  void initializeExecutionProgressbar(int max);
+  void updateProgressBar(int val);
+  void initializeGenerationProgressbar();
+  void updateProgressBar(bool success);
+
+
 // pass through to planning and pattern widget
   void setFeedbackRequested(bool requested);
   void startPoseRequested();
   void setLastStep(int index);
   void replanToIndex(int index);
 // emit signals:
-  void emitCreatedStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan);
   void emitStartFeetAnswer(vigir_footstep_planning_msgs::Feet start);
   void emitGoalFeetAnswer(vigir_footstep_planning_msgs::Feet goal);
   void emitSendPlanningFeedback(vigir_footstep_planning_msgs::PlanningFeedback feedback);
@@ -75,14 +78,15 @@ private Q_SLOTS:
 Q_SIGNALS:
   // Display options
   void displayRangeChanged(int from, int to);
-  void clearScene();
-  void resetValues();
+  void clearAll();
+  void clearStepPlan();
   void clearIM();
   void undo();
   void interactionModeChanged(int interaction_mode);
   void executeRequested();
   // pass through of RequestHandlerBase signals (PlanningRequestHandler + PatternRequestHandler)
   void createdStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan);
+  void createdSequence(vigir_footstep_planning_msgs::StepPlan sequence);
   void startFeetAnswer(vigir_footstep_planning_msgs::Feet start);
   // PlanningRequestHandler signals
   void goalFeetAnswer(vigir_footstep_planning_msgs::Feet goal);

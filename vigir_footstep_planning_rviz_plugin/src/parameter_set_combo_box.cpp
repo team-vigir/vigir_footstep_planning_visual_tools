@@ -6,7 +6,7 @@ namespace vigir_footstep_planning_rviz_plugin
 
 ParameterSetComboBox::ParameterSetComboBox(QWidget *parent) :
     QComboBox(parent)
-  , parameter_set_ac("/johnny5/footstep_planning/params/get_all_parameter_sets", true)
+  , parameter_set_ac("params/get_all_parameter_sets", true)
 {
   this->addItem("default");
   this->setCurrentIndex(0);
@@ -20,9 +20,9 @@ ParameterSetComboBox::~ParameterSetComboBox()
 void ParameterSetComboBox::initialize()
 {
   if(parameter_set_ac.waitForServer(ros::Duration(1,0)))
-    Q_EMIT(actionClientConnected( "/johnny5/footstep_planning/params/get_all_parameter_sets", true));
+    Q_EMIT(actionClientConnected( "params/get_all_parameter_sets", true));
   else
-    Q_EMIT(actionClientConnected( "/johnny5/footstep_planning/params/get_all_parameter_sets", false));
+    Q_EMIT(actionClientConnected( "params/get_all_parameter_sets", false));
 
   updateParameterSetNames();
 }
@@ -39,7 +39,7 @@ void ParameterSetComboBox::updateParameterSetNames()
   }
   else
   {
-    ROS_WARN("get_all_parameter_sets not available! Please activate an \"//johnny5/footstep_planning/params/get_all_parameter_sets\" action server.");
+    ROS_WARN("get_all_parameter_sets not available! Please activate an \"params/get_all_parameter_sets\" action server.");
 
     this->clear();
     this->addItem("default");

@@ -26,6 +26,7 @@ typedef vigir_footstep_planning_msgs::StepPlan StepPlanMsg;
 typedef vigir_footstep_planning_msgs::StepPlanRequest RequestMsg;
 typedef vigir_footstep_planning_msgs::Feet FeetMsg;
 typedef vigir_footstep_planning_msgs::Foot FootMsg;
+typedef vigir_footstep_planning_msgs::Step StepMsg;
 
 namespace vigir_footstep_planning_rviz_plugin
 {
@@ -76,15 +77,19 @@ public Q_SLOTS:
   //start_foot_selection = RequestMsg::RIGHT or RequestMsg::LEFT
   void setStartFoot(int start_foot_selection);
   void setParameterSet(QString parameter_set_name);
+  void resetStepPlan();
 
 Q_SIGNALS:
   void createdStepPlan(vigir_footstep_planning_msgs::StepPlan s);
+  void createdSequence(vigir_footstep_planning_msgs::StepPlan sequence); // values need to be updated
   void receivedPlanningFeedback(vigir_footstep_planning_msgs::PlanningFeedback feedback);
   void startFeetAnswer(vigir_footstep_planning_msgs::Feet start);
   void actionClientConnected(QString name, bool connected);
   void displayError(QString message);
   void displayInfo(QString message);
   void displaySuccess(QString message);
+  void stepPlanGenerationStarted(); // todo
+  void stepPlanGenerationFinished(bool success); // todo
 
 private:
   bool feedback_requested_;

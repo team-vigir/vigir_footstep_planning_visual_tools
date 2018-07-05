@@ -18,7 +18,7 @@ void PatternRequestHandler::sendPatternRequest(int patternMode, bool append)
   setHeaderStamp();
   setPlanningMode(vigir_footstep_planning_msgs::StepPlanRequest::PLANNING_MODE_PATTERN);
   setPatternMode(patternMode);
-  if(append)
+  if(append && current_step_plan.steps.size() > 0)
     addStepPlan(); //current_step_plan.goal is used as new start
   else
     sendRequest();

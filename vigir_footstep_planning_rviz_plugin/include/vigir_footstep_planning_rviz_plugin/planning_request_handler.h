@@ -31,12 +31,16 @@ private:
 
   void goalPoseCallback(const actionlib::SimpleClientGoalState& state, const GenerateFeetPoseResult& result);
 
-private Q_SLOTS:
+  bool activate_on_place_feet;
+  bool append;
+
+public Q_SLOTS:
   void setStartStepIndex(int start_step);
   void setMaxPlanningTime(double t);
   void setMaxNofSteps(int noSteps);
   void setMaxPathLengthRatio(double ratio);
-
+  void setActivateOnPlaceFeet(bool activate); //start step plan generation when feet are placed
+  void setAppend(bool appending);
 
 Q_SIGNALS:
   void goalFeetAnswer(vigir_footstep_planning_msgs::Feet goal);

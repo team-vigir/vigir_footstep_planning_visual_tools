@@ -18,6 +18,8 @@ PlanningWidget::PlanningWidget(QWidget *parent) :
     connect(ui->maxNofStepsSpinBox, SIGNAL(valueChanged(int)), request_handler_, SLOT(setMaxNofSteps(int)));
     connect(ui->maxTimeDoubleSpinBox, SIGNAL(valueChanged(double)), request_handler_, SLOT(setMaxPlanningTime(double)));
     connect(ui->ratioDoubleSpinBox, SIGNAL(valueChanged(double)), request_handler_, SLOT(setMaxPathLengthRatio(double)));
+    connect(ui->autoComputationCheckBox, SIGNAL(toggled(bool)), request_handler_, SLOT(setActivateOnPlaceFeet(bool)));
+    connect(ui->sequenceCheckBox, SIGNAL(toggled(bool)), request_handler_, SLOT(setAppend(bool)));
 }
 
 PlanningWidget::~PlanningWidget()
@@ -93,7 +95,7 @@ void PlanningWidget::replanToIndex(int index)
 // ======= Panel Communication ========================================
 void PlanningWidget::resetValues()
 {
-  //ROS_INFO("PlanningWidget::resetValues not yet implemented yet completely. TODO");
+  //Todo
 }
 
 void PlanningWidget::abort()

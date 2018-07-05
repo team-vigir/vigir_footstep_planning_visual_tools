@@ -7,6 +7,8 @@ namespace vigir_footstep_planning_rviz_plugin
 {
 PlanningRequestHandler::PlanningRequestHandler(QObject* parent)
   : RequestHandlerBase( parent )
+  , append(false)
+  , activate_on_place_feet(false)
 {
 }
 
@@ -20,7 +22,7 @@ void PlanningRequestHandler::sendPlanningRequest(bool append)
      || request_->planning_mode == RequestMsg::PLANNING_MODE_3D)
   {
     setHeaderStamp();
-    if(append)
+    if(append && current_step_plan.steps.size() > 0)
       addStepPlan(); //current_step_plan.goal is used as new start
     else
       sendRequest();
@@ -65,6 +67,11 @@ void PlanningRequestHandler::goalPoseCallback(const actionlib::SimpleClientGoalS
     }
     request_->goal = result->feet;
     Q_EMIT(goalFeetAnswer(result->feet));
+
+    if(activate_on_place_feet)
+    {
+      sendPlanningRequest(append);
+    }
   }
   else{
     ROS_ERROR("%s", result->status.error_msg.c_str());
@@ -170,9 +177,15 @@ void PlanningRequestHandler::appendStepPlan(StepPlanMsg add)
     current.toMsg(step_plan);
     setCurrentStepPlan(step_plan);
     Q_EMIT(createdStepPlan(step_plan));
+    Q_EMIT(stepPlanGenerationFinished(true));
   }
   else
+  {
+    Q_EMIT(stepPlanGenerationFinished(false));
     ROS_ERROR("%s", error_status.error_msg.c_str());
+    if(current_step_plan.steps.size() > 0)
+      Q_EMIT(createdStepPlan(current_step_plan)); //todo?
+  }
 }
 
 // --------------
@@ -209,6 +222,17 @@ void PlanningRequestHandler::setMaxPathLengthRatio(double ratio)
 {
   request_->max_path_length_ratio = (float) ratio;
 }
+
+void PlanningRequestHandler::setActivateOnPlaceFeet(bool activate)
+{
+  activate_on_place_feet = activate;
+}
+
+void PlanningRequestHandler::setAppend(bool appending)
+{
+  append = appending;
+}
+
 
 
 

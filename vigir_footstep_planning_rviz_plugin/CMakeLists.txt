@@ -147,20 +147,21 @@ qt5_wrap_cpp(MOC_FILES
   include/${PROJECT_NAME}/request_handler_base.h
   include/${PROJECT_NAME}/planning_request_handler.h
   include/${PROJECT_NAME}/pattern_request_handler.h
-  include/${PROJECT_NAME}/foot_visual.h
+  include/${PROJECT_NAME}/step_visual.h
   include/${PROJECT_NAME}/planning_widget.h
   include/${PROJECT_NAME}/pattern_widget.h
   include/${PROJECT_NAME}/widget_base.h
-  include/${PROJECT_NAME}/property_widget.h
+  include/${PROJECT_NAME}/step_property.h
   include/${PROJECT_NAME}/status_prompt.h
   include/${PROJECT_NAME}/step_plan_helper.h
   include/${PROJECT_NAME}/parameter_set_combo_box.h
+  include/${PROJECT_NAME}/feet_visual.h
 )
 
 ## Specify additional locations of header files
 set(HEADERS
   include/${PROJECT_NAME}/step_plan_display.h
-  include/${PROJECT_NAME}/foot_visual.h
+  include/${PROJECT_NAME}/step_visual.h
   include/${PROJECT_NAME}/plant_feet_tool.h
   include/${PROJECT_NAME}/footstep_planning_panel.h
   include/${PROJECT_NAME}/request_handler_base.h
@@ -170,16 +171,17 @@ set(HEADERS
   include/${PROJECT_NAME}/planning_widget.h
   include/${PROJECT_NAME}/pattern_widget.h
   include/${PROJECT_NAME}/widget_base.h
-  include/${PROJECT_NAME}/property_widget.h
+  include/${PROJECT_NAME}/step_property.h
   include/${PROJECT_NAME}/status_prompt.h
   include/${PROJECT_NAME}/step_plan_helper.h
   include/${PROJECT_NAME}/parameter_set_combo_box.h
+  include/${PROJECT_NAME}/feet_visual.h
   ${MOC_FILES}
 )
 
 set(SOURCES
   src/step_plan_display.cpp
-  src/foot_visual.cpp
+  src/step_visual.cpp
   src/plant_feet_tool.cpp
   src/footstep_planning_panel.cpp
   src/request_handler_base.cpp
@@ -188,10 +190,11 @@ set(SOURCES
   src/planning_widget.cpp
   src/pattern_widget.cpp
   src/widget_base.cpp
-  src/property_widget.cpp
+  src/step_property.cpp
   src/status_prompt.cpp
   src/step_plan_helper.cpp
   src/parameter_set_combo_box.cpp
+  src/feet_visual.cpp
 )
 
 ## Declare a C++ library

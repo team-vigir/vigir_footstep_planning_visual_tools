@@ -8,9 +8,9 @@
 #include <QObject>
 #include <boost/circular_buffer.hpp>
 
-#include <vigir_footstep_planning_rviz_plugin/foot_visual.h>
+#include <vigir_footstep_planning_rviz_plugin/step_visual.h>
 #include <interactive_markers/menu_handler.h>
-
+#include <vigir_footstep_planning_rviz_plugin/feet_visual.h>
 #endif
 
 namespace Ogre
@@ -38,7 +38,7 @@ typedef visualization_msgs::InteractiveMarkerFeedback InteractiveMarkerFeedbackM
 
 namespace vigir_footstep_planning_rviz_plugin
 {
-enum PlantFeetMode{BOTH = 0, LEFT = 1, RIGHT = 2};
+enum PlantFeetMode{BOTH = 0, LEFT_FOOT = 1, RIGHT_FOOT = 2};
 
 // A tool to place a pair of feet representing the goal of a step plan
 class PlantFeetTool: public rviz::Tool
@@ -68,6 +68,7 @@ public Q_SLOTS:
 
 private:
   Ogre::SceneNode* moving_feet_node_;
+
   StepVisual* moving_left_;
   StepVisual* moving_right_;
   rviz::Arrow* show_dir_;
@@ -91,14 +92,16 @@ private:
   rviz::VectorProperty* current_feet_property_;
   PlantFeetMode mode;
   boost::circular_buffer<boost::shared_ptr<StepVisual> > goal_visuals_;
+  FeetVisual* goal_feet_;
+
   void addGoalFeet(vigir_footstep_planning_msgs::Feet goal, Ogre::Vector3 frame_position, Ogre::Quaternion frame_orientation);
   bool interaction3D;
 
-  void setFeetPos();
-
   Ogre::Vector3 posLeft;
   Ogre::Vector3 posRight;
-  Ogre::Vector3 scale;
+
+  void setFeetPos();
+
 
   void normalizeQuaternion(geometry_msgs::Quaternion& orientation);
 

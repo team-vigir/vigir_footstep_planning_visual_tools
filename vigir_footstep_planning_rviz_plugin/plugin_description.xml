@@ -13,4 +13,11 @@
       Position a pair of feet on the ground plane.
     </description>
   </class>
+  <class name="footstep_planning_rviz_plugin/PropertyWidget"
+	 type="vigir_footstep_planning_rviz_plugin::StepProperty"
+	 base_class_type="rviz::StatusProperty" >
+    <description>
+      Lists properties of current step plan.
+    </description>
+  </class>
 </library>

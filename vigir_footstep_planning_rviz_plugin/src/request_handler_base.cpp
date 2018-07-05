@@ -8,8 +8,8 @@ namespace vigir_footstep_planning_rviz_plugin
 
 RequestHandlerBase::RequestHandlerBase(QObject* parent)
   : QObject( parent )
-  , ac("/johnny5/footstep_planning/step_plan_request", true)
-  , generate_feet_ac("/johnny5/footstep_planning/generate_feet_pose", true)
+  , ac("step_plan_request", true)
+  , generate_feet_ac("generate_feet_pose", true)
   , last_step_index(0)
   , replan_goal_index(0)
   , feedback_requested_(false)
@@ -37,7 +37,8 @@ void RequestHandlerBase::sendRequest()
 {
   if(ac.isServerConnected())
   {
-    requestStartPose(); //set Current Start
+    Q_EMIT(stepPlanGenerationStarted());
+    requestStartPose(); //set Current Start to be displayed
     vigir_footstep_planning_msgs::StepPlanRequestGoal goal;
     goal.plan_request = *request_;
     ac.sendGoal(goal,
@@ -51,12 +52,16 @@ void RequestHandlerBase::resultCallback(const actionlib::SimpleClientGoalState& 
 {
   if(result->status.error == vigir_footstep_planning_msgs::ErrorStatus::NO_ERROR)
   {
-    Q_EMIT(displaySuccess(QString("No errors, set current step plan.")));
     setCurrentStepPlan(result->step_plan);
     Q_EMIT(createdStepPlan(result->step_plan));
+    Q_EMIT(stepPlanGenerationFinished(true));
   }
-  else{
-    Q_EMIT(displayError(QString("Errors during computation of step plan. ") + QString::fromStdString(result->status.error_msg)));
+  else
+  {
+ //   Q_EMIT(displayError(QString("Errors during computation of step plan. ") + QString::fromStdString(result->status.error_msg)));
+    Q_EMIT(stepPlanGenerationFinished(false));
+    if(current_step_plan.steps.size() > 0)
+      Q_EMIT(createdStepPlan(current_step_plan)); // todo: doof?
   }
 }
 
@@ -127,15 +132,15 @@ void RequestHandlerBase::connectToActionServer()
 {
   bool connected = ac.waitForServer(ros::Duration(1,0));
   if(connected)
-    Q_EMIT(actionClientConnected("/johnny5/footstep_planning/step_plan_request", true));
+    Q_EMIT(actionClientConnected("step_plan_request", true));
   else
-    Q_EMIT(actionClientConnected("/johnny5/footstep_planning/step_plan_request", false));
+    Q_EMIT(actionClientConnected("step_plan_request", false));
 
   connected = generate_feet_ac.waitForServer(ros::Duration(1,0));
   if(connected)
-    Q_EMIT(actionClientConnected("/johnny5/footstep_planning/generate_feet_pose", true));
+    Q_EMIT(actionClientConnected("generate_feet_pose", true));
   else
-    Q_EMIT(actionClientConnected("/johnny5/footstep_planning/generate_feet_pose", false));
+    Q_EMIT(actionClientConnected("generate_feet_pose", false));
 }
 
 bool RequestHandlerBase::checkConnection()
@@ -207,6 +212,7 @@ void RequestHandlerBase::setCurrentGoal(int last_index)
 
   //compute shift for orientation
   float x_shift= 0, y_shift = 0.093, z_shift = 0;
+  //todo!
   if(last.foot_index == FootMsg::LEFT)
   {
     y_shift *= -1;
@@ -269,6 +275,7 @@ void RequestHandlerBase::addStepPlan()
   }
   if(ac.isServerConnected())
   {
+    Q_EMIT(stepPlanGenerationStarted());
     vigir_footstep_planning_msgs::StepPlanRequestGoal goal;
     goal.plan_request = nextRequest;
     ac.sendGoal(goal,
@@ -287,14 +294,17 @@ void RequestHandlerBase::addStepPlanCallback(const actionlib::SimpleClientGoalSt
   else
   {
     Q_EMIT(displayError(QString("Errors during computation of step plan. ") + QString::fromStdString(result->status.error_msg)));
+    Q_EMIT(stepPlanGenerationFinished(false));
+    if(current_step_plan.steps.size() > 0)
+      Q_EMIT(createdStepPlan(current_step_plan)); //todo?
   }
 }
 
+// overriden by PlanningRequestHandler
 void RequestHandlerBase::appendStepPlan(StepPlanMsg add)
 {
-
   vigir_footstep_planning::StepPlan current(current_step_plan);
-  vigir_footstep_planning::StepPlan append(add);
+  vigir_footstep_planning::StepPlan to_be_added(add);
 
   for(int i = current_step_plan.steps.size()-1; i > last_step_index; --i)
   {
@@ -304,9 +314,19 @@ void RequestHandlerBase::appendStepPlan(StepPlanMsg add)
   }
   /*
    * For pattern_planning: remove first step of next step plan
+   * For start-goal planning: check second step (=start feet) if step_duration is 0
+   * update step duration to the same as the last step [todo]
    * */
-  append.removeStep(0); // test remove first step (todo)
-  append.toMsg(add);
+  to_be_added.removeStep(0);
+  to_be_added.toMsg(add);
+
+  // for start goal planning check second step of generated step plan
+  if(add.steps[0].step_duration == 0)
+  {
+    StepMsg last;
+    current.getLastStep(last);
+    add.steps[0].step_duration = last.step_duration;
+  }
 
   ErrorStatusMsg error_status = current.appendStepPlan(add);
 
@@ -314,11 +334,23 @@ void RequestHandlerBase::appendStepPlan(StepPlanMsg add)
   {
     StepPlanMsg step_plan;
     current.toMsg(step_plan);
-    setCurrentStepPlan(step_plan);
-    Q_EMIT(createdStepPlan(step_plan));
+    Q_EMIT(stepPlanGenerationFinished(true));
+    Q_EMIT(createdSequence(step_plan)); // sequence is not set as step plan only after it has been updated
   }
   else
+  {
+    Q_EMIT(stepPlanGenerationFinished(false));
     Q_EMIT(displayError(QString::fromStdString(error_status.error_msg)));
+    if(current_step_plan.steps.size() > 0)
+      Q_EMIT(createdStepPlan(current_step_plan)); //todo?
+  }
+}
+
+void RequestHandlerBase::resetStepPlan()
+{
+  current_step_plan = StepPlanMsg();
+  last_step_index = 0;
+  replan_goal_index = 0;
 }
 
 
@@ -333,6 +365,8 @@ void RequestHandlerBase::computeShift(float &x_shift, float &y_shift, float &z_s
   y_shift = y_shift_rot;
   z_shift = z_shift_rot;
 }
+
+
 
 
 } // end namespace vigir_footstep_planning_rviz_plugin

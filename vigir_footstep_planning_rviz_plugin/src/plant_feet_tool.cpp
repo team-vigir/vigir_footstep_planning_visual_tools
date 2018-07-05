@@ -58,8 +58,8 @@ void PlantFeetTool::onInitialize()
   setFeetPos();
   goal_visuals_.rset_capacity(2); // Todo: for way points higher capacity
   display_dir_ = true;
-
   // -----------------------------------------------
+
   moving_feet_node_ = scene_manager_->getRootSceneNode()->createChildSceneNode();
 
   moving_right_ = new StepVisual(scene_manager_,moving_feet_node_, vigir_footstep_planning_msgs::Foot::RIGHT);
@@ -103,14 +103,15 @@ void PlantFeetTool::updateMovingFeetVisibility()
   if( moving_feet_node_ )
   {
     moving_feet_node_->setVisible( true );
+
     switch(mode)
     {
-    case LEFT:
+    case LEFT_FOOT:
       moving_right_->setVisible(false);
       moving_left_->setVisible(true);
       moving_left_->setPosition(Ogre::Vector3(0.0f,0.0f,0.0f));
       break;
-    case RIGHT:
+    case RIGHT_FOOT:
       moving_left_->setVisible(false);
       moving_right_->setVisible(true);
       moving_right_->setPosition(Ogre::Vector3(0.0f,0.0f,0.0f));
@@ -186,36 +187,6 @@ int PlantFeetTool::processKeyEvent(QKeyEvent *event, rviz::RenderPanel *panel)
     moving_feet_node_->setVisible( false );
   }
   return Render;
-}
-
-void PlantFeetTool::setFeetPos()
-{
-  float seperation;
-  float frame_x;
-  float frame_y;
-  float frame_z;
-  ros::NodeHandle nh;
-  if (nh.getParam("/johnny5/footstep_planning/foot/separation", seperation)
-      && nh.getParam("/johnny5/footstep_planning/foot/left/foot_frame/x", frame_x)
-      && nh.getParam("/johnny5/footstep_planning/foot/left/foot_frame/y", frame_y)
-      && nh.getParam("/johnny5/footstep_planning/foot/left/foot_frame/z", frame_z)
-      )
-  {
-    posLeft.x = frame_x;
-    posLeft.y = seperation/2 - frame_y;
-    posLeft.z = frame_z;
-    if(   nh.getParam("/johnny5/footstep_planning/foot/right/foot_frame/x", frame_x)
-       && nh.getParam("/johnny5/footstep_planning/foot/right/foot_frame/y", frame_y)
-       && nh.getParam("/johnny5/footstep_planning/foot/right/foot_frame/z", frame_z)
-       )
-    {
-      posRight.x = frame_x;
-      posRight.y = -seperation/2 - frame_y;
-      posRight.z = frame_z;
-    }
-  }
-  else
-    ROS_INFO("Could not retrieve feet positioning from /johnny5/footstep_planning/foot/");
 }
 
 void PlantFeetTool::update(float wall_dt, float ros_dt)
@@ -367,11 +338,16 @@ InteractiveMarkerMsg PlantFeetTool::makeInteractiveMarker()
   im.header.frame_id = context_->getFrameManager()->getFixedFrame();
   im.header.stamp = ros::Time::now();
   im.name = "feet_im";
-  Ogre::Vector3 pos = moving_feet_node_->getPosition();
-  im.pose.position.x = pos.x;
-  im.pose.position.y = pos.y;
-  im.pose.position.z = pos.z;
-  Ogre::Quaternion orient = moving_feet_node_->getOrientation();
+  Ogre::Vector3 pos =
+      goal_visuals_.size() == 2 ?
+        (goal_visuals_[0]->getPosition() + goal_visuals_[1]->getPosition())
+      : moving_feet_node_->getPosition();
+  im.pose.position.x = pos.x/2;
+  im.pose.position.y = pos.y/2;
+  im.pose.position.z = pos.z/2;
+  Ogre::Quaternion orient = goal_visuals_.size() == 2 ?
+        goal_visuals_[0]->getOrientation() :
+        moving_feet_node_->getOrientation();
   orient.normalise();
   im.pose.orientation.w = orient.w;
   im.pose.orientation.x = orient.x;
@@ -530,6 +506,36 @@ void PlantFeetTool::normalizeQuaternion(geometry_msgs::Quaternion& orientation)
   orientation.x = o.x;
   orientation.y = o.y;
   orientation.z = o.z;
+}
+
+void PlantFeetTool::setFeetPos()
+{
+  float seperation;
+  float frame_x;
+  float frame_y;
+  float frame_z;
+  ros::NodeHandle nh;
+  if (nh.getParam("foot/separation", seperation)
+      && nh.getParam("foot/left/foot_frame/x", frame_x)
+      && nh.getParam("foot/left/foot_frame/y", frame_y)
+      && nh.getParam("foot/left/foot_frame/z", frame_z)
+      )
+  {
+    posLeft.x = frame_x;
+    posLeft.y = seperation/2 - frame_y;
+    posLeft.z = frame_z;
+    if(   nh.getParam("foot/right/foot_frame/x", frame_x)
+       && nh.getParam("foot/right/foot_frame/y", frame_y)
+       && nh.getParam("foot/right/foot_frame/z", frame_z)
+       )
+    {
+      posRight.x = frame_x;
+      posRight.y = -seperation/2 - frame_y;
+      posRight.z = frame_z;
+    }
+  }
+  else
+    ROS_INFO("Could not retrieve feet positioning from /johnny5/footstep_planning/foot/");
 }
 
 

@@ -64,6 +64,9 @@ public:
 
   void initializeInteractiveMarker(interactive_markers::InteractiveMarkerServer* marker_server);
 
+  Ogre::Vector3 getPosition();
+  Ogre::Quaternion getOrientation();
+
   void setFramePosition( const Ogre::Vector3& position );
   void setFrameOrientation( const Ogre::Quaternion& orientation );
   void setPosition(const Ogre::Vector3& position );
@@ -80,14 +83,17 @@ Q_SIGNALS:
   void stepEdited(vigir_footstep_planning_msgs::EditStep edit);
   void cutStepPlanHere(int index);
   void replanToHere(int index);
+  void endStepPlanHere(int index);
   void updateStepsPos();
   void footDropped();
+  void selected(bool selected);
 
 public Q_SLOTS:
   void setValid(bool valid);
   void disableInteractiveMarker();
   void setButtonInteractiveMarker();
   void setInteractionMode(InteractionMode interaction_mode);
+  void changePose(Ogre::Vector3 new_position, Ogre::Quaternion new_orientation); //change pose and emit EditStep
 
 private:
   void processInteractionFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
@@ -107,6 +113,7 @@ private:
 
   void removeStep();
   void eraseInteractiveMarkers();
+  void updatePoseInteractiveMarkers();
 
   void setCheckState(int checked_index); //0 for None
   boost::shared_ptr<rviz::MeshShape> foot_;
@@ -130,6 +137,7 @@ private:
   Ogre::SceneNode* text_node_;
   bool text_visible;
   bool interaction;
+
   void createFootMesh(const std::string& path);
   void createIndexText();
   unsigned int foot_index; //Either left or right
@@ -144,6 +152,8 @@ private:
   Ogre::Vector3 scale_; //(0.001,0.001,0.001);
   Ogre::Vector3 origin_; //(0,0,0.0275);
 
+  Ogre::Vector3 position_; //relative to frame_id of step or fixed frame if no frame id
+  Ogre::Quaternion orientation_;
   void normalizeQuaternion(geometry_msgs::Quaternion& orientation);
 
 

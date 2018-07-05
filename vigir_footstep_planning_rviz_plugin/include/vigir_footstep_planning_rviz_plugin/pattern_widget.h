@@ -44,7 +44,6 @@ public Q_SLOTS:
 
 
 private Q_SLOTS:
-    void on_patternMoreOptionsCheckbox_stateChanged(int arg1);
     void on_patternForwardPushButton_clicked();
     void on_patternBackwardPushButton_clicked();
     void on_patternRotateLeftPushButton_clicked();

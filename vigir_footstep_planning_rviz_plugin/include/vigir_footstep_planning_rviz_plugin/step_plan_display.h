@@ -13,7 +13,8 @@
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/client/terminal_state.h>
 #include <vigir_footstep_planning_rviz_plugin/plant_feet_tool.h>
-#include <vigir_footstep_planning_rviz_plugin/foot_visual.h>
+#include <vigir_footstep_planning_rviz_plugin/step_visual.h>
+#include <vigir_footstep_planning_rviz_plugin/step_property.h>
 #include <memory>
 #endif
 
@@ -35,6 +36,7 @@ class ToolManager;
 class Tool;
 class InteractionTool;
 class InteractiveMarkerDisplay;
+class Property;
 }
 
 namespace interactive_markers
@@ -46,6 +48,7 @@ namespace vigir_footstep_planning_rviz_plugin
 {
 class FootstepPlanningPanel;
 class StepPlanHelper;
+class FeetVisual;
 // for signal slot connection:
 using rviz::Tool;
 
@@ -77,7 +80,7 @@ private Q_SLOTS:
   void activateFeetTool(PlantFeetMode mode, bool active);
   void setStartVisible();
   void updateDisplay(int from, int to);
-  virtual void reset();
+  void resetStepPlan();
   void visualizeFeedback(vigir_footstep_planning_msgs::PlanningFeedback feedback);
   void setDisplayFeedback();
   void updateACConnected();
@@ -90,7 +93,10 @@ private Q_SLOTS:
   void visualizeStepCost();
   void setUpdateStepPlan();
   void updateStepVisuals(vigir_footstep_planning_msgs::StepPlan updated_step_plan);
-
+  void addGoalFeetProperties(vigir_footstep_planning_msgs::Feet goal_feet);
+  void addStartFeetProperties(vigir_footstep_planning_msgs::Feet goal_feet);
+  void startPoseUpdated();
+  void goalPoseUpdated();
 
 
 Q_SIGNALS:
@@ -109,21 +115,34 @@ private:
   void addStartFeet(const vigir_footstep_planning_msgs::Feet& start, const Ogre::Vector3& frame_position, const Ogre::Quaternion& frame_orientation);
   void displaySteps(const std::vector<vigir_footstep_planning_msgs::Step>& steps, const Ogre::Vector3& frame_position, const Ogre::Quaternion& frame_orientation);
   bool transformToFixedFrame(Ogre::Vector3& position, Ogre::Quaternion& orientation, const std_msgs::Header& header);
-  void getParameters();
 
-  boost::circular_buffer<boost::shared_ptr<StepVisual> > step_visuals_;
-  boost::circular_buffer<boost::shared_ptr<StepVisual> > start_visuals_;
+  void addFootProperty(vigir_footstep_planning_msgs::Foot foot, rviz::Property* parent);
+  void updateFootProperty(rviz::Property* parent, vigir_footstep_planning_msgs::Foot updated_foot);
+
+  boost::circular_buffer<boost::shared_ptr<StepVisual> > step_visuals_; // Steps of current step plan
+  boost::circular_buffer<boost::shared_ptr<StepVisual> > feedback_visuals_;
+
+//  boost::circular_buffer<boost::shared_ptr<StepVisual> > start_visuals_;
+  std::unique_ptr<FeetVisual> start_visuals_;
 
   vigir_footstep_planning_msgs::StepPlan current_step_plan;
 
   rviz::StringProperty* frame_id_property_;
   rviz::BoolProperty* display_index_;
   rviz::BoolProperty* display_feedback_;
-  rviz::BoolProperty* display_start_;
   rviz::StatusProperty* ac_connected_;
   rviz::BoolProperty* visualize_valid_;
   rviz::BoolProperty* visualize_cost_;
   rviz::BoolProperty* update_step_plan_positions_;
+  rviz::Property* property_container_;
+  rviz::BoolProperty* goal_property_container_;
+  rviz::BoolProperty* start_property_container_;
+  std::vector<rviz::Property*> goal_properties;
+  std::vector<rviz::Property*> start_properties;
+  rviz::VectorProperty* goal_position_property_;
+  rviz::QuaternionProperty* goal_orientation_property_;
+  rviz::VectorProperty* start_position_property_;
+  rviz::QuaternionProperty* start_orientation_property_;
 
   FootstepPlanningPanel* panel_;
   rviz::ToolManager* tool_manager_;

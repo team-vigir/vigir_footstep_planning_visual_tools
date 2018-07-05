@@ -38,7 +38,7 @@ PatternWidget::~PatternWidget()
 void PatternWidget::initialize()
 {
   request_handler_->initialize();
-  ui->patternMoreOptionsCheckbox->setChecked(false);
+  ui->patternMoreOptionsGroupBox->setChecked(false);
 }
 
 void PatternWidget::save( rviz::Config config ) const
@@ -52,7 +52,7 @@ void PatternWidget::save( rviz::Config config ) const
   config.mapSetValue("DeltaZDoubleSpinBox", ui->patternDeltaZDoubleSpinBox->value());
   config.mapSetValue("ClosingStepCheckBox", ui->patternClosingStepCheckBox->isChecked());
   // More options
-  config.mapSetValue("MoreOptionsCheckbox", ui->patternMoreOptionsCheckbox->isChecked());
+  config.mapSetValue("MoreOptionsGroup", ui->patternMoreOptionsGroupBox->isChecked());
   config.mapSetValue("StartIndexSpinBox", ui->patternStartIndexSpinBox->value());
   config.mapSetValue("RollSpinBox", ui->patternRollSpinBox->value());
   config.mapSetValue("PitchSpinBox", ui->patternPitchSpinBox->value());
@@ -91,7 +91,7 @@ void PatternWidget::load( const rviz::Config& config )
 
   // More options --------------------------------------
   config.mapGetBool("MoreOptionsCheckbox", &checked);
-  ui->patternMoreOptionsCheckbox->setChecked(checked);
+  ui->patternMoreOptionsGroupBox->setChecked(checked);
 
   config.mapGetInt("StartIndexSpinBox", &val_i);
   ui->patternStartIndexSpinBox->setValue(val_i);
@@ -146,7 +146,7 @@ void PatternWidget::setLastStep(int last_index)
 // ========== Panel Communication =============================
 void PatternWidget::resetValues()
 {
-  //ROS_INFO("ResetValues PatternWidget, not yet implemented completely, TODO");
+  //Todo
 }
 
 void PatternWidget::abort()
@@ -154,15 +154,6 @@ void PatternWidget::abort()
   request_handler_->cancelGoals();
 }
 
-// ========== UI Slots =================================================================
-void PatternWidget::on_patternMoreOptionsCheckbox_stateChanged(int arg1)
-{
-    if(arg1 == Qt::Checked)
-      ui->patternMoreOptionsGroupBox->show();
-    if(arg1 == Qt::Unchecked)
-      ui->patternMoreOptionsGroupBox->hide();
-}
-// ---
 // ----------- Send request ------
 void PatternWidget::on_patternSamplingPushButton_clicked()
 {
