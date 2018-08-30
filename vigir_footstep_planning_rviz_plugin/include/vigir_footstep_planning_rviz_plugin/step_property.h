@@ -2,27 +2,19 @@
 #define PROPERTY_WIDGET_H
 
 #ifndef Q_MOC_RUN
-
-#include <rviz/properties/property.h>
-#include <vigir_footstep_planning_msgs/footstep_planning_msgs.h>
-#include <rviz/properties/string_property.h>
 #include <rviz/properties/status_property.h>
-#include <OgreQuaternion.h>
+#include <vigir_footstep_planning_rviz_plugin/common/common.h>
 #include <OgreVector3.h>
+#include <OgreQuaternion.h>
 #endif
 
 namespace rviz
 {
 class VectorProperty;
 class QuaternionProperty;
-class StatusProperty;
 class FloatProperty;
 }
-namespace Ogre
-{
-class Vector3;
-class Quaternion;
-}
+
 namespace vigir_footstep_planning_rviz_plugin
 {
 class StepProperty : public rviz::StatusProperty
@@ -46,8 +38,10 @@ public Q_SLOTS:
     void updateStep(vigir_footstep_planning_msgs::EditStep edit_step);
     void setExpanded(bool expanded);
 private Q_SLOTS:
-    void invokePoseUpdate();
+    void onPoseEdited();
     void onShiftChanged();
+    void updateStatus();
+
 Q_SIGNALS:
     void stepPoseChanged(Ogre::Vector3 position, Ogre::Quaternion orientation);
 
@@ -63,7 +57,6 @@ private:
     rviz::Property* edit_step_property;
     rviz::VectorProperty* original_position_;
     rviz::VectorProperty* position_shift_;
-    rviz::QuaternionProperty* original_orientation_;
 
     rviz::Property* property_container_;
     rviz::StatusProperty* is_valid_;

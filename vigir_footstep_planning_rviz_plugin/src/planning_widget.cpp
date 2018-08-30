@@ -5,25 +5,40 @@
 namespace vigir_footstep_planning_rviz_plugin {
 
 PlanningWidget::PlanningWidget(QWidget *parent) :
-    WidgetBase(parent),
+    QWidget(parent),
     ui(new Ui::PlanningWidget)
 {
     ui->setupUi(this);
     request_handler_ = new PlanningRequestHandler();
 
-    // ui signals
-    connect(ui->planningSetGoalToolButton, SIGNAL(toggled(bool)), this, SLOT(emitFeetToolActivated(bool)));
 
-    connect(ui->startFootComboBox, SIGNAL(currentIndexChanged(int)), request_handler_, SLOT(setStartStepIndex(int)));
-    connect(ui->maxNofStepsSpinBox, SIGNAL(valueChanged(int)), request_handler_, SLOT(setMaxNofSteps(int)));
-    connect(ui->maxTimeDoubleSpinBox, SIGNAL(valueChanged(double)), request_handler_, SLOT(setMaxPlanningTime(double)));
-    connect(ui->ratioDoubleSpinBox, SIGNAL(valueChanged(double)), request_handler_, SLOT(setMaxPathLengthRatio(double)));
-    connect(ui->autoComputationCheckBox, SIGNAL(toggled(bool)), request_handler_, SLOT(setActivateOnPlaceFeet(bool)));
-    connect(ui->sequenceCheckBox, SIGNAL(toggled(bool)), request_handler_, SLOT(setAppend(bool)));
+    connect(ui->planningSetGoalToolButton, &QToolButton::toggled, this, &PlanningWidget::setGoalActivated);
+
+    connect(ui->startFootComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), request_handler_, &PlanningRequestHandler::setStartStepIndex);
+    connect(ui->startFootComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &PlanningWidget::changed);
+
+    connect(ui->maxNofStepsSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), request_handler_, &PlanningRequestHandler::setMaxNofSteps);
+    connect(ui->maxNofStepsSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &PlanningWidget::changed);
+
+
+    connect(ui->maxTimeDoubleSpinBox, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), request_handler_, &PlanningRequestHandler::setMaxPlanningTime);
+    connect(ui->maxTimeDoubleSpinBox, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), this, &PlanningWidget::changed);
+
+    connect(ui->ratioDoubleSpinBox, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), request_handler_, &PlanningRequestHandler::setMaxPathLengthRatio);
+    connect(ui->ratioDoubleSpinBox, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),this, &PlanningWidget::changed);
+
+    connect(ui->autoComputationCheckBox, &QCheckBox::toggled, request_handler_, &PlanningRequestHandler::setActivateOnPlaceFeet);
+    connect(ui->autoComputationCheckBox, &QCheckBox::toggled, this, &PlanningWidget::changed);
+
+    connect(ui->sequenceCheckBox, &QCheckBox::toggled, request_handler_, &PlanningRequestHandler::setAppend);
+    connect(ui->sequenceCheckBox, &QCheckBox::toggled, this, &PlanningWidget::changed);
+
+    connect(ui->moreOptionsGroupBox, &QGroupBox::toggled, this, &PlanningWidget::changed);
 }
 
 PlanningWidget::~PlanningWidget()
 {
+  
   delete ui;
   delete request_handler_;
 }
@@ -31,21 +46,45 @@ PlanningWidget::~PlanningWidget()
 void PlanningWidget::initialize()
 {
   ui->moreOptionsGroupBox->setChecked(false);
-
-  //todo
-  // request_handler_->initialize();
 }
 
 void PlanningWidget::save( rviz::Config config ) const
 {
-  config.mapSetValue("sequence", ui->sequenceCheckBox->isChecked());
+  config.mapSetValue("planning::PlanningModeComboBox", ui->planningModeComboBox->currentIndex());
+  config.mapSetValue("planning::AutoComputationCheckBox", ui->autoComputationCheckBox->isChecked());
+  config.mapSetValue("planning::MoreOptionsGroupBox", ui->moreOptionsGroupBox->isChecked());
+  config.mapSetValue("planning::StartFootComboBox", ui->startFootComboBox->currentIndex());
+  config.mapSetValue("planning::MaxTimeSpinBox", ui->maxTimeDoubleSpinBox->value());
+  config.mapSetValue("planning::MaxNofStepsSpingBox", ui->maxNofStepsSpinBox->value());
+  config.mapSetValue("planning::RatioDoubleSpinBox", ui->ratioDoubleSpinBox->value());
 }
 
 void PlanningWidget::load( const rviz::Config& config )
 {
   bool checked;
-  config.mapGetBool("sequence", &checked);
-  ui->sequenceCheckBox->setChecked(checked);
+  float val_f;
+  int val_i;
+
+  config.mapGetInt("planning::PlanningModeComboBox", &val_i);
+  ui->planningModeComboBox->setCurrentIndex(val_i);
+
+  config.mapGetBool("planning::AutoComputationCheckBox", &checked);
+  ui->autoComputationCheckBox->setChecked(checked);
+
+  config.mapGetBool("planning::MoreOptionsGroupBox", &checked);
+  ui->moreOptionsGroupBox->setChecked(checked);
+
+  config.mapGetInt("planning::StartFootComboBox", &val_i);
+  ui->startFootComboBox->setCurrentIndex(val_i);
+
+  config.mapGetFloat("planning::MaxTimeSpinBox", &val_f);
+  ui->maxTimeDoubleSpinBox->setValue(static_cast<double>(val_f));
+
+  config.mapGetInt("planning::MaxNofStepsSpingBox", &val_i);
+  ui->maxNofStepsSpinBox->setValue(val_i);
+
+  config.mapGetFloat("planning::RatioDoubleSpinBox", &val_f);
+  ui->ratioDoubleSpinBox->setValue(static_cast<double>(val_f));
 }
 
 // ========= Handling Display - Request Handler Communication  ===========================================
@@ -54,15 +93,10 @@ void PlanningWidget::startPoseRequested()
   request_handler_->requestStartPose();
 }
 
-void PlanningWidget::handleGoalPose(Ogre::Vector3 position, Ogre::Quaternion orientation)
+void PlanningWidget::updateGoalPose(vigir_footstep_planning_msgs::Feet goal_pose)
 {
   ui->planningSetGoalToolButton->setChecked(false);
-  request_handler_->setGoal(position, orientation);
-}
-
-void PlanningWidget::setCurrentStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan)
-{
-  request_handler_->setCurrentStepPlan(step_plan);
+  request_handler_->setGoal(goal_pose);
 }
 
 void PlanningWidget::setFeedbackRequested(bool requested)
@@ -93,11 +127,6 @@ void PlanningWidget::replanToIndex(int index)
 
 
 // ======= Panel Communication ========================================
-void PlanningWidget::resetValues()
-{
-  //Todo
-}
-
 void PlanningWidget::abort()
 {
   request_handler_->cancelGoals();
@@ -109,12 +138,6 @@ void PlanningWidget::on_planningComputeCommandLinkButton_clicked()
 {
   request_handler_->setPlanningMode(ui->planningModeComboBox->currentIndex());
   request_handler_->sendPlanningRequest(ui->sequenceCheckBox->isChecked());
-}
-
-// Emit signals:
-void PlanningWidget::emitFeetToolActivated(bool activated)
-{
-  Q_EMIT(feetToolActivated(activated));
 }
 
 

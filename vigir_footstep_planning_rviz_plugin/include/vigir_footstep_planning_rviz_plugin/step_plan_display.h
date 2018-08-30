@@ -1,27 +1,18 @@
-
 #ifndef STEP_PLAN_DISPLAY_H
 #define STEP_PLAN_DISPLAY_H
 
 #ifndef Q_MOC_RUN
-
-#include <boost/circular_buffer.hpp>
 #include <rviz/display.h>
-
-#include <vigir_footstep_planning_msgs/footstep_planning_msgs.h>
+#include <vigir_footstep_planning_rviz_plugin/common/common.h>
 #include <OgreVector3.h>
 #include <OgreQuaternion.h>
 #include <actionlib/client/simple_action_client.h>
-#include <actionlib/client/terminal_state.h>
-#include <vigir_footstep_planning_rviz_plugin/plant_feet_tool.h>
-#include <vigir_footstep_planning_rviz_plugin/step_visual.h>
-#include <vigir_footstep_planning_rviz_plugin/step_property.h>
+
+#include <boost/circular_buffer.hpp>
 #include <memory>
 #endif
 
-
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::EditStepAction> EditStepActionClient;
-typedef vigir_footstep_planning_msgs::Step StepMsg;
-
 
 namespace Ogre
 {
@@ -37,6 +28,8 @@ class Tool;
 class InteractionTool;
 class InteractiveMarkerDisplay;
 class Property;
+class VectorProperty;
+class QuaternionProperty;
 }
 
 namespace interactive_markers
@@ -49,8 +42,8 @@ namespace vigir_footstep_planning_rviz_plugin
 class FootstepPlanningPanel;
 class StepPlanHelper;
 class FeetVisual;
-// for signal slot connection:
-using rviz::Tool;
+class PlantFeetTool;
+class StepVisual;
 
 // StepPlanDisplay defines a plugin for rviz to display and interact with
 // Step Plans. It inherits from rviz::Display and functions as a display
@@ -76,7 +69,6 @@ public Q_SLOTS:
 private Q_SLOTS:
   void updateFrameID();
   void displayIndex();
-  void activateFeetTool(bool active);
   void activateFeetTool(PlantFeetMode mode, bool active);
   void setStartVisible();
   void updateDisplay(int from, int to);
@@ -84,12 +76,12 @@ private Q_SLOTS:
   void visualizeFeedback(vigir_footstep_planning_msgs::PlanningFeedback feedback);
   void setDisplayFeedback();
   void updateACConnected();
-  void checkTool(Tool* tool);
-  void addStartFeet(vigir_footstep_planning_msgs::Feet start);
+  void checkTool(rviz::Tool* tool);
+  void addStartFeetMsg(vigir_footstep_planning_msgs::Feet start);
+  void addGoalFeet(vigir_footstep_planning_msgs::Feet goal);
   void setStepValid(unsigned int index, bool valid);
   void visualizeCut(int new_end);
   void visualizeReplan(int end);
-  void handleFeetPose(Ogre::Vector3 position, Ogre::Quaternion orientation, PlantFeetMode mode);
   void visualizeStepCost();
   void setUpdateStepPlan();
   void updateStepVisuals(vigir_footstep_planning_msgs::StepPlan updated_step_plan);
@@ -97,6 +89,10 @@ private Q_SLOTS:
   void addStartFeetProperties(vigir_footstep_planning_msgs::Feet goal_feet);
   void startPoseUpdated();
   void goalPoseUpdated();
+  void setGoalVisible();
+  void updateGoalPose(Ogre::Vector3 position, Ogre::Quaternion orientation);
+  void updateStartPose(Ogre::Vector3 position, Ogre::Quaternion orientation);
+  void resetGoal();
 
 
 Q_SIGNALS:
@@ -107,8 +103,7 @@ Q_SIGNALS:
 private:
   void initializeDisplayProperties();
   void makeFeetToolConnections();
-  void makeConnections();
-  void disconnectFeetTool();
+  void makePanelConnections();
   void makeStepVisualConnections(const StepVisual* visual);
   void makeStepPlanHelperConnections();
   void processMessage( const vigir_footstep_planning::msgs::StepPlan::ConstPtr& msg);
@@ -122,8 +117,8 @@ private:
   boost::circular_buffer<boost::shared_ptr<StepVisual> > step_visuals_; // Steps of current step plan
   boost::circular_buffer<boost::shared_ptr<StepVisual> > feedback_visuals_;
 
-//  boost::circular_buffer<boost::shared_ptr<StepVisual> > start_visuals_;
-  std::unique_ptr<FeetVisual> start_visuals_;
+  std::unique_ptr<FeetVisual> start_feet_;
+  std::unique_ptr<FeetVisual> goal_feet_;
 
   vigir_footstep_planning_msgs::StepPlan current_step_plan;
 
@@ -145,18 +140,16 @@ private:
   rviz::QuaternionProperty* start_orientation_property_;
 
   FootstepPlanningPanel* panel_;
+  StepPlanHelper* step_plan_helper_;
   rviz::ToolManager* tool_manager_;
   PlantFeetTool* feet_tool_;
-  int index_feet_tool;
   rviz::Tool* interact_tool_;
- // rviz::InteractiveMarkerDisplay* interactive_marker_display_;
-  // handles interactive markers created in StepVisual
-  interactive_markers::InteractiveMarkerServer* interactive_marker_server_;
-  bool displayFeedback;
 
-  StepPlanHelper* step_plan_helper_;
   InteractionMode interaction_mode_;
+  interactive_markers::InteractiveMarkerServer* im_server_steps;
+  interactive_markers::InteractiveMarkerServer* im_server_feet;
 
+  bool displayFeedback;
   int last_step_index;
 
   // Parameters:

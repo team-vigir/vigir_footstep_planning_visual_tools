@@ -14,16 +14,11 @@ ParameterSetComboBox::ParameterSetComboBox(QWidget *parent) :
 
 ParameterSetComboBox::~ParameterSetComboBox()
 {
-
 }
 
 void ParameterSetComboBox::initialize()
 {
-  if(parameter_set_ac.waitForServer(ros::Duration(1,0)))
-    Q_EMIT(actionClientConnected( "params/get_all_parameter_sets", true));
-  else
-    Q_EMIT(actionClientConnected( "params/get_all_parameter_sets", false));
-
+  parameter_set_ac.waitForServer(ros::Duration(1,0));
   updateParameterSetNames();
 }
 
@@ -39,7 +34,7 @@ void ParameterSetComboBox::updateParameterSetNames()
   }
   else
   {
-    ROS_WARN("get_all_parameter_sets not available! Please activate an \"params/get_all_parameter_sets\" action server.");
+    ROS_ERROR("get_all_parameter_sets not available! Please activate an \"params/get_all_parameter_sets\" action server.");
 
     this->clear();
     this->addItem("default");

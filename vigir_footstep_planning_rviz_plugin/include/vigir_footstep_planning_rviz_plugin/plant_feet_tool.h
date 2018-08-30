@@ -5,12 +5,11 @@
 
 #include <rviz/tool.h>
 #include <QKeyEvent>
-#include <QObject>
-#include <boost/circular_buffer.hpp>
+#include <actionlib/client/simple_action_client.h>
+#include <vigir_footstep_planning_rviz_plugin/common/common.h>
+#include <OgreVector3.h>
+#include <OgreQuaternion.h>
 
-#include <vigir_footstep_planning_rviz_plugin/step_visual.h>
-#include <interactive_markers/menu_handler.h>
-#include <vigir_footstep_planning_rviz_plugin/feet_visual.h>
 #endif
 
 namespace Ogre
@@ -20,31 +19,24 @@ class SceneNode;
 
 namespace rviz
 {
-class VectorProperty;
 class ViewportMouseEvent;
 class RenderPanel;
-class Arrow;
 }
 
-namespace interactive_markers
-{
-  class InteractiveMarkerServer;
-}
-
-typedef visualization_msgs::InteractiveMarker InteractiveMarkerMsg;
-typedef visualization_msgs::InteractiveMarkerControl InteractiveMarkerControlMsg;
-typedef visualization_msgs::Marker MarkerMsg;
-typedef visualization_msgs::InteractiveMarkerFeedback InteractiveMarkerFeedbackMsg;
+typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::GenerateFeetPoseAction> GenerateFeetPoseActionClient;
+typedef vigir_footstep_planning_msgs::GenerateFeetPoseResultConstPtr GenerateFeetPoseResult;
 
 namespace vigir_footstep_planning_rviz_plugin
 {
-enum PlantFeetMode{BOTH = 0, LEFT_FOOT = 1, RIGHT_FOOT = 2};
 
-// A tool to place a pair of feet representing the goal of a step plan
+class FeetVisual;
+
+// - Tool handling first placing of a pair of feet (either goal (mode=GOAL_FEET) or start (mode=START_FEET)
+// - Generating of valid feet message for given position & orientation
 class PlantFeetTool: public rviz::Tool
 {
-Q_OBJECT
-public:
+  Q_OBJECT
+public:// A tool to place a pair of feet representing the goal pose of a step plan
   PlantFeetTool();
   ~PlantFeetTool();
 
@@ -56,63 +48,30 @@ public:
   virtual int processMouseEvent( rviz::ViewportMouseEvent& event );
   virtual int processKeyEvent (QKeyEvent *event, rviz::RenderPanel *panel);
 
-  virtual void update(float wall_dt, float ros_dt);
-
   void setMode(PlantFeetMode mode);
-  void setInteractiveMarkerServer(interactive_markers::InteractiveMarkerServer* server);
 
 public Q_SLOTS:
-  // Tool gets the correct goal feet from panel
-  void addGoalFeet(vigir_footstep_planning_msgs::Feet goal);
-  void reset();
-
-private:
-  Ogre::SceneNode* moving_feet_node_;
-
-  StepVisual* moving_left_;
-  StepVisual* moving_right_;
-  rviz::Arrow* show_dir_;
-  bool display_dir_;
-
-  void updateMovingFeetVisibility();
-
-  interactive_markers::InteractiveMarkerServer* interactive_marker_server_;
-  interactive_markers::MenuHandler menu_handler;
-  void processButtonFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
-  void processMenuFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
-  void processInteractionFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
-  void enableSixDOFInteraction();
-  void enablePlaneInteraction();
-  void enableButtonInteraction();
-  visualization_msgs::Marker makeMarker();
-  visualization_msgs::InteractiveMarker makeInteractiveMarker();
-  void addPlaneControl(visualization_msgs::InteractiveMarker& im);
-  void addSixDOFControl(visualization_msgs::InteractiveMarker& im);
-  void addMoveControl(visualization_msgs::InteractiveMarker& im);
-  rviz::VectorProperty* current_feet_property_;
-  PlantFeetMode mode;
-  boost::circular_buffer<boost::shared_ptr<StepVisual> > goal_visuals_;
-  FeetVisual* goal_feet_;
-
-  void addGoalFeet(vigir_footstep_planning_msgs::Feet goal, Ogre::Vector3 frame_position, Ogre::Quaternion frame_orientation);
-  bool interaction3D;
-
-  Ogre::Vector3 posLeft;
-  Ogre::Vector3 posRight;
-
-  void setFeetPos();
-
-
-  void normalizeQuaternion(geometry_msgs::Quaternion& orientation);
-
+  void setValidFeet(Ogre::Vector3 position, Ogre::Quaternion orientation, std::string frame_id, FeetType type);
 
 Q_SIGNALS:
-  void feetDropped(Ogre::Vector3 position, Ogre::Quaternion orientation, PlantFeetMode mode);
-  void activateTool(bool activate);
-  void newStartPose(Ogre::Vector3 position, Ogre::Quaternion orientation);
-//  void newStartFeet(Ogre::Vector3 position_left, Ogre::Vector3 position_right, Ogre::Quaternion orientation);
+  void newStartPose(vigir_footstep_planning_msgs::Feet goal_feet);
+  void newGoalPose(vigir_footstep_planning_msgs::Feet start_feet);
+
+private:
+  void setValidGoalCallback(const actionlib::SimpleClientGoalState& state, const GenerateFeetPoseResult& result);
+  void setValidStartCallback(const actionlib::SimpleClientGoalState& state, const GenerateFeetPoseResult& result);
+  void setRobotPose(const Ogre::Vector3& position, const Ogre::Quaternion& orientation, const std::string& frame_id);
+
+  ros::NodeHandle nh;
+  ros::Publisher robot_pose_publisher;
+  GenerateFeetPoseActionClient generate_feet_ac;
+
+  Ogre::SceneNode* moving_feet_node_;
+  FeetVisual* moving_feet_;
+
+  PlantFeetMode mode;
 };
 
-} // end namespace rviz_plugin_tutorials
+} // end namespace vigir_footstep_planning_rviz_plugin
 
 #endif // PLANT_FEET_TOOL_H

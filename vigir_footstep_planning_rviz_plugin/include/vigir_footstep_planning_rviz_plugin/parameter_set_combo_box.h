@@ -19,8 +19,8 @@ class ParameterSetComboBox : public QComboBox
 public:
     ParameterSetComboBox(QWidget *parent = 0);
     ~ParameterSetComboBox();
-
     void initialize();
+
 Q_SIGNALS:
     void actionClientConnected(QString name, bool connected);
 

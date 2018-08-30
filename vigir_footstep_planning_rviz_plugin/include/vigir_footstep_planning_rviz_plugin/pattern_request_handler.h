@@ -19,9 +19,7 @@ public:
   virtual ~PatternRequestHandler();
   void sendPatternRequest(int patternMode, bool append);
 
-private:
-  void setPatternMode(int mode);
-private Q_SLOTS:
+public Q_SLOTS:
   //set Pattern Parameters:
   void setNoSteps(int no_steps);
   void setStepDistance(double step_dist);
@@ -39,6 +37,12 @@ private Q_SLOTS:
   void setExtraSeperation(int state);
   void setUseTerrainModel(int state);
   void setOverride3D(int state);
+
+protected:
+  void appendStepPlan(StepPlanMsg add) override;
+
+private:
+  void setPatternMode(int mode);
 };
 } // end namespace vigir_footstep_planning_rviz_plugin
 

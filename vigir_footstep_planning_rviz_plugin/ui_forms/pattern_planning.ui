@@ -36,7 +36,7 @@
       <item row="0" column="0">
        <widget class="QLabel" name="patternNOStepsLabel">
         <property name="text">
-         <string>Number of steps</string>
+         <string>Number of Steps</string>
         </property>
        </widget>
       </item>
@@ -155,7 +155,7 @@
       <item row="4" column="0">
        <widget class="QLabel" name="patternDeltaZLabel">
         <property name="text">
-         <string>delta z per step</string>
+         <string>Delta z per Step</string>
         </property>
        </widget>
       </item>
@@ -190,7 +190,7 @@
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;an extra step will be added to close the feet&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
-         <string>Do closing step</string>
+         <string>Do Closing Step</string>
         </property>
         <property name="checked">
          <bool>false</bool>
@@ -347,7 +347,7 @@
               <item>
                <widget class="QCheckBox" name="patternExtraSeperationCheckBox">
                 <property name="text">
-                 <string>Extra seperation</string>
+                 <string>Extra Seperation</string>
                 </property>
                </widget>
               </item>

@@ -2,21 +2,18 @@
 // ACHTUNG!!!!
 // Ogre::Quaternion Konstruktor: Quaternion(W, x, y, z)
 //
-#include <algorithm>
-#include <OGRE/OgreVector3.h>
-#include <OGRE/OgreSceneNode.h>
-#include <OGRE/OgreSceneManager.h>
-#include <OGRE/OgreStringConverter.h>
-#include <rviz/geometry.h>
-#include <rviz/viewport_mouse_event.h>
-#include <rviz/ogre_helpers/shape.h>
+#include <vigir_footstep_planning_rviz_plugin/step_visual.h>
+#include <vigir_footstep_planning_rviz_plugin/common/ogre_visualization_msgs_functions.h>
+#include <vigir_footstep_planning_rviz_plugin/common/interactive_marker_functions.h>
+
+#include <interactive_markers/interactive_marker_server.h>
+
+#include <OgreSceneNode.h>
+#include <OgreSceneManager.h>
 #include <rviz/ogre_helpers/mesh_shape.h>
 #include <rviz/ogre_helpers/stl_loader.h>
 #include <rviz/ogre_helpers/movable_text.h>
 
-#include <vigir_footstep_planning_rviz_plugin/step_visual.h>
-
-#include <interactive_markers/interactive_marker_server.h>
 
 using namespace interactive_markers;
 
@@ -26,84 +23,157 @@ namespace vigir_footstep_planning_rviz_plugin
 StepVisual::StepVisual( Ogre::SceneManager* scene_manager,
                         Ogre::SceneNode* parent_node,
                         unsigned int which_foot,
-                        std::string frame_id,
-                        int index):
-  scene_manager_(scene_manager)
+                        std::string frame_id/*= ""*/,
+                        int index/*= -1*/):
+    scene_manager_(scene_manager)
+  , text_node_(0)
   , foot_index(which_foot)
   , index(index)
-  , text_visible(false)
-  , interaction(false)
-  , frame_id_(frame_id)
-  , interaction_mode_(PLANE)
   , cost(0)
   , risk(0)
   , interactive_marker_server_(0)
-  , mesh_resource("")
-  , origin_(0.0f,0.0f,0.0f)
-  , current_im_name("")
-  , snap_to_valid(false)
-  , current_marker(0)
+  , frame_id_(frame_id)
+  , interaction_mode_(PLANE)
+  , snap_to_valid(true)
+  , display_index(false)
+  , im_scale(0.35)
+  , mesh_origin_(0.0f,0.0f,0.0f) // origin of frame
+  , foot_origin_(0.0f, 0.0f, 0.0f) // origin of foot (urdf)
+  , frame_origin_(0.0f,0.f, 0.f) // foot frame origin
 {
+  // Frame node of the scene in which the foot is placed
   frame_node_ = parent_node->createChildSceneNode();
-  foot_.reset(new rviz::MeshShape(scene_manager_, frame_node_));
-  getParameters();
+  // Frame Node of the foot, handles the right positioning of foot
+  foot_frame_node_ = frame_node_->createChildSceneNode();
+
+  foot_.reset(new rviz::MeshShape(scene_manager_, foot_frame_node_));
+  setFootProperties();
+
   foot_->setScale(scale_);
+
   if(index >= 0) //start and goal have index -1
-  {
     createIndexText();
-  }
+
   if(!(which_foot == FootMsg::LEFT || which_foot == FootMsg::RIGHT))
   {
-    ROS_ERROR("Invalid index for foot_index, must be FootMsg::LEFT or ::RIGHT");
+    ROS_ERROR("Invalid index for foot_index, must be Foot::LEFT or ::RIGHT");
   }
 }
 
 StepVisual::~StepVisual()
 {
-  if(interaction)
+  if(interactive_marker_server_)
   {
-    eraseInteractiveMarkers();
+    deleteInteractiveMarker();
     interactive_marker_server_->applyChanges();
   }
   // Destroy the frame node since we don't need it anymore.
  scene_manager_->destroySceneNode( frame_node_ );
- delete stl_loader_;
- if(index>=0)
-   delete text_;
+}
+
+void StepVisual::setFootProperties()
+{
+  ros::NodeHandle nh;
+  float x, y, z;
+  if(nh.getParam("urdf_properties/mesh_origin/x", x)
+       && nh.getParam("urdf_properties/mesh_origin/y", y)
+       && nh.getParam("urdf_properties/mesh_origin/z", z))
+  {
+    mesh_origin_ = Ogre::Vector3(x, y, z);
+  }
+  else
+    ROS_ERROR("Could not retrieve origin of foot mesh");
+
+  if(nh.getParam("urdf_properties/mesh_scale/x", x)
+       && nh.getParam("urdf_properties/mesh_scale/y", y)
+       && nh.getParam("urdf_properties/mesh_scale/z", z))
+  {
+    scale_ = Ogre::Vector3(x,y,z);
+  }
+  else
+    ROS_ERROR("Could not retrieve scale of foot mesh");
+
+  std::string foot = "";
+  if(foot_index ==FootMsg::RIGHT)
+    foot = "right";
+  else
+    foot = "left";
+
+  if(nh.getParam("urdf_properties/foot_origin_"+foot+"/x", x)
+       && nh.getParam("urdf_properties/foot_origin_"+foot+"/y", y)
+       && nh.getParam("urdf_properties/foot_origin_"+foot+"/z", z))
+  {
+    foot_origin_ = Ogre::Vector3(x, y, z);
+  }
+  else
+    ROS_ERROR("Could not retrieve origin of foot");
+
+  double roll, pitch, yaw;
+  if(nh.getParam("foot/" + foot + "/foot_frame/x", x)
+     && nh.getParam("foot/" + foot + "/foot_frame/y", y)
+     && nh.getParam("foot/" + foot + "/foot_frame/z", z)
+     && nh.getParam("foot/" + foot + "/foot_frame/roll", roll)
+     && nh.getParam("foot/" + foot + "/foot_frame/pitch", pitch)
+     && nh.getParam("foot/" + foot + "/foot_frame/yaw", yaw))
+  {
+    frame_origin_ = Ogre::Vector3(x,y,z);
+  }
+  else
+    ROS_ERROR("Could not retrieve origin of foot frame (foot/right/foot_frame/x)");
+
+  if(!nh.getParam("foot/size/x", im_scale))
+    im_scale = 0.35;
 }
 
 // CREATE VISUAL:
+void StepVisual::createByMessage(const vigir_footstep_planning_msgs::Step& msg)
+{
+  current_step = msg;
+  cost = msg.cost;
+  risk = msg.risk;
+  createVisualAt(Ogre::Vector3(0,0,0), Ogre::Quaternion(1,0,0,0));
+  setPose(msg.foot.pose);
+  visualizeValid(msg.valid && !msg.colliding);
+}
+
+void StepVisual::createByFootMsg(const vigir_footstep_planning_msgs::Foot& msg)
+{
+  createVisualAt(Ogre::Vector3(0,0,0), Ogre::Quaternion(1,0,0,0));
+  setPose(msg.pose);
+}
+
 void StepVisual::createVisualAt(const Ogre::Vector3& position, const Ogre::Quaternion& orientation)
 {
   position_ = Ogre::Vector3(position.x, position.y, position.z);
   orientation_ = Ogre::Quaternion(orientation.w, orientation.x, orientation.y, orientation.z);
   if(index>=0)
   {
-    text_node_->setPosition(position+origin_);
+    text_node_->setPosition(position+Ogre::Vector3(0,0,0.05));
   }
-  createFootMesh(mesh_resource);
+  createFootMesh();
 
   if(foot_index == FootMsg::LEFT)
   {
-    foot_->setColor(1.0 , 0.0 , 0.0 , 0.9);
+    foot_->setColor(1.0 , 0.0 , 0.0 , 1.0);
   }
   if(foot_index == FootMsg::RIGHT)
   {
-    foot_->setColor(0.0 , 1.0 , 0.0 , 0.9);
+    foot_->setColor(0.0 , 1.0 , 0.0 , 1.0);
   }
-  foot_->setPosition(position+origin_);
-  foot_->setOrientation(orientation);
+
+  foot_frame_node_->setPosition(position);
+  foot_frame_node_->setOrientation(orientation);
 }
 
-void StepVisual::getParameters()
+void StepVisual::createFootMesh()
 {
-  // get parameters
+  // 1) Get Mesh resource:
   ros::NodeHandle nh;
-  std::string mesh_dir;
+  std::string mesh_dir = "";
   if (!(nh.getParam("meshes_path", mesh_dir)))
     ROS_ERROR("Could not retrieve mesh directory");
 
-  std::string foot_mesh;
+  std::string foot_mesh = "";
   if(foot_index == FootMsg::LEFT)
   {
     if(!(nh.getParam("foot_mesh/left", foot_mesh)))
@@ -115,48 +185,37 @@ void StepVisual::getParameters()
       ROS_ERROR("Could not retrieve mesh resource file");
   }
 
-  mesh_resource = mesh_dir + foot_mesh;
-
-
-  float x, y, z;
-  if(nh.getParam("foot_mesh_properties/origin/x", x)
-       && nh.getParam("foot_mesh_properties/origin/y", y)
-       && nh.getParam("foot_mesh_properties/origin/z", z))
+  // 2) Load Mesh
+  ogre_tools::STLLoader* stl_loader = new ogre_tools::STLLoader();
+  if(stl_loader->load(mesh_dir + foot_mesh))
   {
-    origin_.x = x;
-    origin_.y = y;
-    origin_.z = z; //= Ogre::Vector3(x, y, z);
+    foot_->beginTriangles();
+
+    for (unsigned i=0; i < stl_loader->triangles_.size(); i++)
+    {
+      ogre_tools::STLLoader::Triangle & t = stl_loader->triangles_[i];
+      foot_->addVertex(t.vertices_[0],t.normal_);
+      foot_->addVertex(t.vertices_[1],t.normal_);
+      foot_->addVertex(t.vertices_[2],t.normal_);
+    }
+    foot_->endTriangles();
+  // 3) Set position of the foot in foot_frame_node
+    foot_->setPosition(mesh_origin_/* - foot_origin_*/);
+    foot_->setOrientation(Ogre::Quaternion(1,0,0,0));
   }
   else
-    ROS_ERROR("Could not retrieve origin of foot mesh");
+    ROS_ERROR("Could not load mesh at %s", (mesh_dir + foot_mesh).c_str());
 
-  if(nh.getParam("foot_mesh_properties/scale/x", x)
-       && nh.getParam("foot_mesh_properties/scale/y", y)
-       && nh.getParam("foot_mesh_properties/scale/z", z))
-  {
-    scale_.x = x;
-    scale_.y = y;
-    scale_.z = z; //= Ogre::Vector3(x,y,z);
-  }
-  else
-    ROS_ERROR("Could not retrieve scale of foot mesh");
-
+  delete stl_loader;
 }
 
-void StepVisual::createVisualAt(const geometry_msgs::Point& foot_position, const geometry_msgs::Quaternion& foot_orientation)
+void StepVisual::setVisible(bool visible)
 {
-  Ogre::Vector3	p(foot_position.x, foot_position.y, foot_position.z);
-  Ogre::Quaternion o(foot_orientation.w, foot_orientation.x, foot_orientation.y, foot_orientation.z);
-
-  createVisualAt(p, o);
-}
-
-void StepVisual::createByMessage(const vigir_footstep_planning_msgs::Step msg)
-{
-  current_step = msg;
-  cost = msg.cost;
-  risk = msg.risk;
-  createVisualAt(msg.foot.pose.position, msg.foot.pose.orientation);
+  frame_node_->setVisible(visible);
+  if(index>=0)
+    text_node_->setVisible(display_index && visible);
+  if(interactive_marker_server_)
+    visible ? setButtonInteractiveMarker() : deleteInteractiveMarker();
 }
 
 // Position and orientation are passed through to the SceneNode.
@@ -174,77 +233,42 @@ void StepVisual::setPosition( const Ogre::Vector3& position)
 {
   if(index>=0)
   {
-    text_node_->setPosition(position+origin_);
+    text_node_->setPosition(position+mesh_origin_+Ogre::Vector3(0,0,0.05));
   }
-  foot_->setPosition(position+origin_);
+  foot_frame_node_->setPosition(position);
+}
+
+void StepVisual::setPose(const geometry_msgs::Pose& pose)
+{
+  Ogre::Quaternion current_orientation = getOgreQuaternion(pose.orientation);
+  Ogre::Matrix3 rotMat;
+  current_orientation.ToRotationMatrix(rotMat);
+  Ogre::Vector3 current_frame_origin = rotMat*frame_origin_;
+  setPosition(getOgreVector(pose.position) /*+ current_frame_origin*/);
+  setOrientation(current_orientation);
+  current_frame_origin += getOgreVector(pose.position);
+  //ROS_ERROR("position msg: %f, %f, %f", current_frame_origin.x, current_frame_origin.y, current_frame_origin.z);
+
 }
 
 void StepVisual::setOrientation( const Ogre::Quaternion& orientation)
 {
-  foot_->setOrientation(orientation);
+  foot_frame_node_->setOrientation(orientation);
+}
+
+Ogre::Vector3 StepVisual::getPosition()
+{
+  return foot_frame_node_->getPosition();
+}
+
+Ogre::Quaternion StepVisual::getOrientation()
+{
+  return foot_frame_node_->getOrientation();
 }
 
 void StepVisual::setColor( float r, float g, float b, float a )
 {
   foot_->setColor( r, g, b, a );
-}
-
-void StepVisual::createFootMesh(const std::string& path)
-{
-  stl_loader_ = new ogre_tools::STLLoader();
-  if(stl_loader_->load(path))
-  {
-    foot_->beginTriangles();
-    for (unsigned i=0; i < stl_loader_->triangles_.size(); i++)
-    {
-      ogre_tools::STLLoader::Triangle & t = stl_loader_->triangles_[i];
-      foot_->addVertex(t.vertices_[0],t.normal_);
-      foot_->addVertex(t.vertices_[1],t.normal_);
-      foot_->addVertex(t.vertices_[2],t.normal_);
-    }
-    foot_->endTriangles();
-  }
-  else
-    ROS_ERROR("Could not load mesh at %s", path.c_str());
-}
-
-void StepVisual::setVisible(bool visible)
-{
-  frame_node_->setVisible(visible);
-  if(index>=0)
-    text_node_->setVisible(text_visible && visible);
-  if(interaction)
-    visible ? setButtonInteractiveMarker() : disableInteractiveMarker();
-}
-
-void StepVisual::removeStep()
-{
-  vigir_footstep_planning_msgs::EditStep edit;
-  edit.header.stamp = ros::Time::now();
-  edit.header.frame_id = current_step.header.frame_id;
-  edit.step = current_step;
-  edit.plan_mode = vigir_footstep_planning_msgs::EditStep::EDIT_MODE_REMOVE;
-
-  Q_EMIT(stepEdited(edit));
-}
-
-void StepVisual::setValid(bool valid)
-{
-  if(!valid)
-  {
-    foot_->setColor(0.5 , 0.5 , 0.5 , 0.9);
-  }
-  else
-  {
-    if(foot_index == FootMsg::LEFT)
-    {
-      foot_->setColor(1.0 , 0.0 , 0.0 , 0.9);
-    }
-    if(foot_index == FootMsg::RIGHT)
-    {
-      foot_->setColor(0.0 , 1.0 , 0.0 , 0.9);
-    }
-  }
 }
 
 
@@ -253,7 +277,7 @@ void StepVisual::displayIndex(bool visible)
   if(index>=0)
   {
     text_node_->setVisible(visible);
-    text_visible = visible;
+    display_index = visible;
   }
 }
 void StepVisual::createIndexText()
@@ -266,6 +290,64 @@ void StepVisual::createIndexText()
   text_node_->setVisible(false);
 }
 
+// called when stepPlanUpdated() was emitted
+void StepVisual::updateStepMsg(const vigir_footstep_planning_msgs::Step updated_msg)
+{
+ // setPosition(getOgreVector(updated_msg.foot.pose.position));
+ // setOrientation(getOgreQuaternion(updated_msg.foot.pose.orientation));
+  setPose(updated_msg.foot.pose);
+  current_step = updated_msg;
+  cost = updated_msg.cost;
+  risk = updated_msg.risk;
+  visualizeValid(!updated_msg.colliding && updated_msg.valid);
+  if(interactive_marker_server_)
+    resetInteractiveMarker();
+}
+
+// called from FeetVisual
+void StepVisual::updateFootMsg(const vigir_footstep_planning_msgs::Foot updated_msg)
+{
+  setPose(updated_msg.pose);
+  if(interactive_marker_server_)
+    resetInteractiveMarker();
+}
+
+// position changed through editing of step property:
+void StepVisual::changePose(Ogre::Vector3 new_position, Ogre::Quaternion new_orientation)
+{
+  setPosition(new_position);
+  setOrientation(new_orientation);
+  resetInteractiveMarker();
+
+  getPoseMsg(current_step.foot.pose, new_position, new_orientation);
+
+  vigir_footstep_planning_msgs::EditStep edit;
+  edit.header.stamp = ros::Time::now();
+  edit.header.frame_id = current_step.header.frame_id;
+  edit.step = current_step;
+  edit.plan_mode = vigir_footstep_planning_msgs::EditStep::EDIT_MODE_FULL;
+
+  Q_EMIT(stepEdited(edit));
+}
+
+void StepVisual::visualizeValid(bool valid)
+{
+  if(!valid)
+  {
+    foot_->setColor(0.5 , 0.5 , 0.5 , 1);
+  }
+  else
+  {
+    if(foot_index == FootMsg::LEFT)
+    {
+      foot_->setColor(1.0 , 0.0 , 0.0 , 1);
+    }
+    if(foot_index == FootMsg::RIGHT)
+    {
+      foot_->setColor(0.0 , 1.0 , 0.0 , 1);
+    }
+  }
+}
 
 void StepVisual::visualizeCost(float max)
 {
@@ -277,62 +359,6 @@ void StepVisual::visualizeCost(float max)
   foot_->setColor(1-ratio, 0.0, ratio, 0.9);
 }
 
-
-
-void StepVisual::updateStep(const vigir_footstep_planning_msgs::Step updated_msg)
-{
-  this->setPosition(Ogre::Vector3(updated_msg.foot.pose.position.x,
-                                  updated_msg.foot.pose.position.y,
-                                  updated_msg.foot.pose.position.z));
-
-  this->setOrientation(Ogre::Quaternion(updated_msg.foot.pose.orientation.w,
-                                        updated_msg.foot.pose.orientation.x,
-                                        updated_msg.foot.pose.orientation.y,
-                                        updated_msg.foot.pose.orientation.z));
-  current_step = updated_msg;
-  cost = updated_msg.cost;
-  risk = updated_msg.risk;
-
- // this->setValid(updated_msg.valid);
-  if(interactive_marker_server_)
-    updatePoseInteractiveMarkers();
-}
-
-void StepVisual::changePose(Ogre::Vector3 new_position, Ogre::Quaternion new_orientation)
-{
-  this->setPosition(new_position);
-  this->setOrientation(new_orientation);
-  this->updatePoseInteractiveMarkers();
-
-  current_step.foot.pose.position.x = new_position.x;
-  current_step.foot.pose.position.y = new_position.y;
-  current_step.foot.pose.position.z = new_position.z;
-  current_step.foot.pose.orientation.x = new_orientation.x;
-  current_step.foot.pose.orientation.y = new_orientation.y;
-  current_step.foot.pose.orientation.z = new_orientation.z;
-  current_step.foot.pose.orientation.w = new_orientation.w;
-
-
-  vigir_footstep_planning_msgs::EditStep edit;
-  edit.header.stamp = ros::Time::now();
-  edit.header.frame_id = current_step.header.frame_id;
-  edit.step = current_step;
-  edit.plan_mode = vigir_footstep_planning_msgs::EditStep::EDIT_MODE_FULL;
-
-  Q_EMIT(stepEdited(edit));
-}
-
-Ogre::Vector3 StepVisual::getPosition()
-{
-  return position_;
-}
-
-Ogre::Quaternion StepVisual::getOrientation()
-{
-  return orientation_;
-}
-
-
 // Interactive Markers -----------------------------------------------------------------
 void StepVisual::initializeInteractiveMarker(InteractiveMarkerServer* marker_server)
 {
@@ -340,12 +366,12 @@ void StepVisual::initializeInteractiveMarker(InteractiveMarkerServer* marker_ser
 
   MenuHandler::EntryHandle interaction_sub = menu_handler.insert( "Interaction"); // case 1
   menu_handler.insert( "Disable Interaction",  boost::bind(&StepVisual::processMenuFeedback, this, _1)); // case 2
-  menu_handler.insert("Delete", boost::bind(&StepVisual::processMenuFeedback, this, _1)); // case 3
+  menu_handler.setVisible(menu_handler.insert("Delete", boost::bind(&StepVisual::processMenuFeedback, this, _1)), false); // case 3
   menu_handler.insert("Set as last step", boost::bind(&StepVisual::processMenuFeedback, this, _1)); // case 4
   menu_handler.insert("Replan from here", boost::bind(&StepVisual::processMenuFeedback, this, _1)); // case 5
   menu_handler.insert("Replan to here", boost::bind(&StepVisual::processMenuFeedback, this, _1)); // case 6
-  menu_handler.setCheckState(menu_handler.insert("Snap to valid position (if available)", boost::bind(&StepVisual::processMenuFeedback, this, _1)), MenuHandler::CHECKED); // case 7
-  snap_to_valid = true;
+  menu_handler.setCheckState(menu_handler.insert("Update 3D when moved", boost::bind(&StepVisual::processMenuFeedback, this, _1)),
+                             (snap_to_valid ? MenuHandler::CHECKED : MenuHandler::UNCHECKED)); // case 7
   // Interaction Sub menu:
   mode_begin = menu_handler.insert(interaction_sub, "None", boost::bind(&StepVisual::processSetInteractionMode, this, _1));
   menu_handler.insert(interaction_sub, "2D Plane", boost::bind(&StepVisual::processSetInteractionMode, this, _1));
@@ -353,29 +379,47 @@ void StepVisual::initializeInteractiveMarker(InteractiveMarkerServer* marker_ser
   menu_handler.insert(interaction_sub, "Full 6 DOF", boost::bind(&StepVisual::processSetInteractionMode, this, _1));
 
   setButtonInteractiveMarker();
-  interaction = true;
 }
 
 // set interactive marker
-void StepVisual::setFullSixDOFInteractiveMarker()
+void StepVisual::setButtonInteractiveMarker()
 {
-  ROS_INFO("Hold shift to move in/out the camera plane");
-  eraseInteractiveMarkers();
-  InteractiveMarkerMsg im = makeInteractiveMarker("6DOF_withMove3D");
+  if(!interactive_marker_server_)
+    return;
 
-  addSixDOFControl(im);
+  // remove other interactive marker of foot
+  deleteInteractiveMarker();
 
-  // Move 3D with box marker
-  InteractiveMarkerControlMsg control;
-  control.name = "move_3d";
-  MarkerMsg marker = makeMarker(/*transparent*/ false);
-  control.markers.push_back(marker);
-  control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_3D;
-  control.always_visible = false;
-  im.controls.push_back(control);
+  geometry_msgs::Pose current_pose;
+  getPoseMsg(current_pose, foot_frame_node_->getPosition(), foot_frame_node_->getOrientation());
+
+  visualization_msgs::InteractiveMarker im = makeInteractiveMarker("button"+ QString::number(index).toStdString(),
+                                                                       frame_id_, current_pose, im_scale);
+
+  addButtonControl(im, makeMarker());
+
+  interactive_marker_server_->insert(im, boost::bind(&StepVisual::processButtonFeedback, this, _1));
+
+  setCheckState(0); // mode=none
+  menu_handler.apply( *interactive_marker_server_, im.name );
+  interactive_marker_server_->applyChanges();
+}
+void StepVisual::setPlaneInteractiveMarker()
+{
+  deleteInteractiveMarker();
+
+  geometry_msgs::Pose current_pose;
+  getPoseMsg(current_pose, foot_frame_node_->getPosition(), foot_frame_node_->getOrientation());
+
+  visualization_msgs::InteractiveMarker im = makeInteractiveMarker("plane"+ QString::number(index).toStdString(),
+                                                                       frame_id_, /*current_pose*/current_step.foot.pose, im_scale);
+
+  addPlaneControl(im, makeMarker(), /*with_rotation*/true);
 
   interactive_marker_server_->insert(im, boost::bind(&StepVisual::processInteractionFeedback, this, _1));
-  setCheckState(FULLSIXDOF);
+
+  setCheckState(PLANE);
+
   menu_handler.apply( *interactive_marker_server_, im.name );
   interactive_marker_server_->applyChanges();
 }
@@ -383,47 +427,38 @@ void StepVisual::setSixDOFInteractiveMarker()
 {
   // Move on 2d plane with box marker
   // Move 6DOF with default controls
-  eraseInteractiveMarkers();
-  InteractiveMarkerMsg im = makeInteractiveMarker("6DOF");
+  deleteInteractiveMarker();
+
+  geometry_msgs::Pose current_pose;
+  getPoseMsg(current_pose, foot_frame_node_->getPosition(), foot_frame_node_->getOrientation());
+
+  InteractiveMarkerMsg im = makeInteractiveMarker("6DOF"+ QString::number(index).toStdString(),
+                                                  frame_id_, current_pose, im_scale);
 
   addSixDOFControl(im);
-
-  addPlaneControl(im, /*with_rotation*/ false);
+  addPlaneControl(im, makeMarker(), /*with_rotation*/false);
 
   interactive_marker_server_->insert(im, boost::bind(&StepVisual::processInteractionFeedback, this, _1));
   setCheckState(SIXDOF);
   menu_handler.apply( *interactive_marker_server_, im.name );
   interactive_marker_server_->applyChanges();
 }
-void StepVisual::setPlaneInteractiveMarker()
+void StepVisual::setFullSixDOFInteractiveMarker()
 {
-  eraseInteractiveMarkers();
-  visualization_msgs::InteractiveMarker im = makeInteractiveMarker("plane");
+  ROS_INFO("Hold shift to move in/out the camera plane");
+  deleteInteractiveMarker();
 
-  addPlaneControl(im, /*with_rotation*/true);
+  geometry_msgs::Pose current_pose;
+  getPoseMsg(current_pose, foot_frame_node_->getPosition(), foot_frame_node_->getOrientation());
+
+  InteractiveMarkerMsg im = makeInteractiveMarker("6DOF_withMove3D" + QString::number(index).toStdString(),
+                                                  frame_id_, current_pose, im_scale);
+
+  addSixDOFControl(im);
+  addMoveSixDOFControl(im, makeMarker());
 
   interactive_marker_server_->insert(im, boost::bind(&StepVisual::processInteractionFeedback, this, _1));
-  setCheckState(PLANE);
-  menu_handler.apply( *interactive_marker_server_, im.name );
-  interactive_marker_server_->applyChanges();
-}
-void StepVisual::setButtonInteractiveMarker()
-{
-  // remove other interactive marker
-  eraseInteractiveMarkers();
-  visualization_msgs::InteractiveMarker im = makeInteractiveMarker("button");
-  visualization_msgs::Marker box_marker = makeMarker(false/*true*/);
-
-  visualization_msgs::InteractiveMarkerControl control;
-  control.interaction_mode = visualization_msgs::InteractiveMarkerControl::BUTTON;
-  control.markers.push_back( box_marker);
-  control.always_visible = false;
-  im.controls.push_back(control);
-
-  interactive_marker_server_->insert(im, boost::bind(&StepVisual::processButtonFeedback, this, _1));
-
-
-  setCheckState(0); // mode=none
+  setCheckState(FULLSIXDOF);
   menu_handler.apply( *interactive_marker_server_, im.name );
   interactive_marker_server_->applyChanges();
 }
@@ -457,12 +492,17 @@ void StepVisual::processInteractionFeedback(const visualization_msgs::Interactiv
 {
   if(feedback->event_type == visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE)
   {
-    this->setPosition(Ogre::Vector3( feedback->pose.position.x, feedback->pose.position.y, feedback->pose.position.z) - origin_);
-    this->setOrientation(Ogre::Quaternion(feedback->pose.orientation.w, feedback->pose.orientation.x, feedback->pose.orientation.y, feedback->pose.orientation.z ));
+    Ogre::Vector3 current_position = getOgreVector(feedback->pose.position); // position of the drawable
+    Ogre::Quaternion current_orientation = getOgreQuaternion(feedback->pose.orientation);
+    setPosition(current_position);
+    setOrientation(current_orientation);
 
-    current_step.foot.pose.position.x = feedback->pose.position.x;
-    current_step.foot.pose.position.y = feedback->pose.position.y;
-    current_step.foot.pose.position.z = feedback->pose.position.z-0.0275;
+    Ogre::Matrix3 rotMat;
+    current_orientation.ToRotationMatrix(rotMat);
+    Ogre::Vector3 current_frame_origin = rotMat.Transpose()*frame_origin_;
+
+    //current_step.foot.pose.position = getPositionMsg(current_position - frame_origin_);
+    current_step.foot.pose.position = feedback->pose.position;
     current_step.foot.pose.orientation = feedback->pose.orientation;
 
     vigir_footstep_planning_msgs::EditStep edit;
@@ -490,18 +530,18 @@ void StepVisual::processMenuFeedback(const FeedbackConstPtr &feedback)
     setButtonInteractiveMarker();
     break;
   case 3: // Delete
-    removeStep();
+//    removeStep(); unused functionality
     break;
-  case 4:
+  case 4: // set as last step
     Q_EMIT(endStepPlanHere(index));
     break;
-  case 5: // Select as next start
+  case 5: // replan from here
     Q_EMIT(cutStepPlanHere(index));
     break;
-  case 6: // Select as goal for replan
+  case 6: // replan to here
     Q_EMIT(replanToHere(index));
     break;
-  case 7: // Snap to Valid position
+  case 7: // snap to Valid position
     MenuHandler::CheckState state;
     menu_handler.getCheckState(feedback->menu_entry_id, state);
     if(state == MenuHandler::CHECKED)
@@ -514,11 +554,10 @@ void StepVisual::processMenuFeedback(const FeedbackConstPtr &feedback)
       menu_handler.setCheckState(feedback->menu_entry_id, MenuHandler::CHECKED);
       snap_to_valid = true;
     }
-    menu_handler.apply(*interactive_marker_server_, current_im_name);
     interactive_marker_server_->applyChanges();
     break;
   default:
-    ROS_WARN("Menu Entry not found");
+    ROS_ERROR("Menu Entry not found");
   }
 }
 void StepVisual::processSetInteractionMode(const FeedbackConstPtr &feedback)
@@ -528,7 +567,7 @@ void StepVisual::processSetInteractionMode(const FeedbackConstPtr &feedback)
   menu_handler.getCheckState(handle,state);
 
   if(state == MenuHandler::CHECKED)
-    return; // nothing changes
+    return; // nothing changes (one entry has to be checked, it is not unchecked by clicking on it)
 
   if(handle == mode_begin)
   {
@@ -547,121 +586,18 @@ void StepVisual::processSetInteractionMode(const FeedbackConstPtr &feedback)
 }
 
 // helper functions to add controls & marker
-void StepVisual::addPlaneControl(InteractiveMarkerMsg& im, bool with_rotation)
+visualization_msgs::Marker StepVisual::makeMarker()
 {
-  visualization_msgs::InteractiveMarkerControl plane_control;
-  plane_control.orientation.w = 1;
-  plane_control.orientation.x = 0;
-  plane_control.orientation.y = 1;
-  plane_control.orientation.z = 0;
-  normalizeQuaternion(plane_control.orientation);
-  // Rotate
-  if(with_rotation)
-  {
-    plane_control.name = "rotate_xy";
-    plane_control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
-    im.controls.push_back(plane_control);
-  }
-
-  // Move Plane with box marker
-  visualization_msgs::Marker box_marker = makeMarker(false);
-  plane_control.markers.push_back( box_marker);
-  plane_control.name = "move_xy";
-  plane_control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_PLANE;
-  plane_control.always_visible = true;
-  im.controls.push_back(plane_control);
-}
-void StepVisual::addSixDOFControl(InteractiveMarkerMsg& im)
-{
-  InteractiveMarkerControlMsg control;
-  // x direction
-  control.orientation.w = 1;
-  control.orientation.x = 1;
-  control.orientation.y = 0;
-  control.orientation.z = 0;
-  normalizeQuaternion(control.orientation);
-  control.name = "rotate_x";
-  control.interaction_mode = InteractiveMarkerControlMsg::ROTATE_AXIS;
-  im.controls.push_back(control);
-  control.name = "move_x";
-  control.interaction_mode = InteractiveMarkerControlMsg::MOVE_AXIS;
-  im.controls.push_back(control);
-
-  // y direction
-  control.orientation.w = 1;
-  control.orientation.x = 0;
-  control.orientation.y = 0;
-  control.orientation.z = 1;
-  normalizeQuaternion(control.orientation);
-  control.name = "rotate_y";
-  control.interaction_mode = InteractiveMarkerControlMsg::ROTATE_AXIS;
-  im.controls.push_back(control);
-  control.name = "move_y";
-  control.interaction_mode = InteractiveMarkerControlMsg::MOVE_AXIS;
-  im.controls.push_back(control);
-
-  // z direction
-  control.orientation.w = 1;
-  control.orientation.x = 0;
-  control.orientation.y = 1;
-  control.orientation.z = 0;
-  normalizeQuaternion(control.orientation);
-  control.name = "rotate_z";
-  control.interaction_mode = InteractiveMarkerControlMsg::ROTATE_AXIS;
-  im.controls.push_back(control);
-  control.name = "move_z";
-  control.interaction_mode = InteractiveMarkerControlMsg::MOVE_AXIS;
-  im.controls.push_back(control);
-}
-visualization_msgs::InteractiveMarker StepVisual::makeInteractiveMarker(const std::string& type_name)
-{
-  visualization_msgs::InteractiveMarker im;
-  im.header.frame_id = frame_id_;
-  im.header.stamp = ros::Time::now();
-  im.name = type_name + QString::number(index).toStdString();
-  current_im_name = im.name;
-  im.pose = toPoseMessage();
-
-
-  ros::NodeHandle nh;
-  float size_x;
-  if(nh.getParam("foot/size/x", size_x))
-    im.scale = size_x;
-  else
-    im.scale = 0.35;
-  return im;
-}
-visualization_msgs::Marker StepVisual::makeMarker(bool transparent)
-{
-  visualization_msgs::Marker marker;
-
-  ros::NodeHandle nh;
-  float size_x, size_y, size_z;
-  if(  !(nh.getParam("foot/size/x", size_x)
-       && nh.getParam("foot/size/y", size_y)
-       && nh.getParam("foot/size/z", size_z)))
-  {
-    size_x = 0.3;
-    size_y = 0.3;
-    size_z = 0.3;
-    marker.type = visualization_msgs::Marker::SPHERE;
-  }
-  {
-    marker.type = visualization_msgs::Marker::SPHERE;
-  }
-
-  marker.scale.x = size_x;
-  marker.scale.y = size_x;
-  marker.scale.z = size_x;
-  marker.color.r = foot_index == FootMsg::LEFT ? 1 : 0;
-  marker.color.g = foot_index == FootMsg::RIGHT ? 1 : 0;
-  marker.color.b = 0;
-  marker.color.a = transparent? 0 : 0.1;
-  current_marker = &marker;
+  std_msgs::ColorRGBA color;
+  color.r = foot_index == FootMsg::LEFT ? 1 : 0;
+  color.g = foot_index == FootMsg::RIGHT ? 1 : 0;
+  color.b = 0;
+  color.a = 0.1;
+  visualization_msgs::Marker marker = makeSphereMarker(im_scale, color);
   return marker;
 }
 
-// menu handling:
+// sub menu check state handling:
 void StepVisual::setCheckState(int checked_index)
 {
   menu_handler.setCheckState(mode_begin, MenuHandler::UNCHECKED);
@@ -672,27 +608,23 @@ void StepVisual::setCheckState(int checked_index)
   // set Checked:
   menu_handler.setCheckState(mode_begin + checked_index, MenuHandler::CHECKED);
 }
-
-// helper functions:
-void StepVisual::disableInteractiveMarker()
-{
-  eraseInteractiveMarkers();
-  interactive_marker_server_->applyChanges();
-}
+// set default interaction, which is activated when clicked on button
 void StepVisual::setInteractionMode(InteractionMode interaction_mode)
 {
   interaction_mode_ = interaction_mode;
 }
-void StepVisual::eraseInteractiveMarkers()
+void StepVisual::deleteInteractiveMarker()
 {
   interactive_marker_server_->erase("button"+QString::number(index).toStdString());
   interactive_marker_server_->erase("plane"+ QString::number(index).toStdString());
   interactive_marker_server_->erase("6DOF"+QString::number(index).toStdString());
   interactive_marker_server_->erase("6DOF_withMove3D"+QString::number(index).toStdString());
+  interactive_marker_server_->applyChanges();
 }
-void StepVisual::updatePoseInteractiveMarkers()
+// update position of interactive marker by making new interactive marker
+void StepVisual::resetInteractiveMarker()
 {
-  if(interaction) // update position of interactive marker by making new interactive marker
+  if(interactive_marker_server_)
   {
     // check current interaction:
     MenuHandler::CheckState state;
@@ -722,30 +654,8 @@ void StepVisual::updatePoseInteractiveMarkers()
     }
   }
 }
-geometry_msgs::Pose StepVisual::toPoseMessage()
-{
-  geometry_msgs::Pose pose;
-  Ogre::Vector3 pos = foot_->getPosition();
-  pose.position.x=pos.x;
-  pose.position.y=pos.y;
-  pose.position.z=pos.z;
-  Ogre::Quaternion orient = foot_->getOrientation();
-  pose.orientation.x = orient.x;
-  pose.orientation.y = orient.y;
-  pose.orientation.z = orient.z;
-  pose.orientation.w = orient.w;
-  normalizeQuaternion(pose.orientation);
-  return pose;
-}
-void StepVisual::normalizeQuaternion(geometry_msgs::Quaternion& orientation)
-{
-  Ogre::Quaternion o(orientation.w, orientation.x, orientation.y, orientation.z);
-  o.normalise();
-  orientation.w = o.w;
-  orientation.x = o.x;
-  orientation.y = o.y;
-  orientation.z = o.z;
-}
+
+
 } // end namespace vigir_footstep_planning_rviz_plugin
 
 

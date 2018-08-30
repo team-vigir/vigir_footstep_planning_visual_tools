@@ -3,9 +3,6 @@
 
 #include <vigir_footstep_planning_rviz_plugin/request_handler_base.h>
 
-typedef vigir_footstep_planning_msgs::FeetPoseRequest FeetPoseRequestMsg;
-typedef vigir_footstep_planning_msgs::StepPlan StepPlanMsg;
-typedef vigir_footstep_planning_msgs::Step StepMsg;
 
 namespace vigir_footstep_planning_rviz_plugin
 {
@@ -21,18 +18,9 @@ public:
   virtual ~PlanningRequestHandler();
 
   void sendPlanningRequest(bool append);
-  void setGoal(Ogre::Vector3 position, Ogre::Quaternion orientation);
+ // void setGoal(Ogre::Vector3 position, Ogre::Quaternion orientation);
+  void setGoal(vigir_footstep_planning_msgs::Feet goal_feet);
   void replanToIndex(int index);
-  void appendStepPlan(StepPlanMsg add) override;
-
-private:
-  void setReplanGoal(int index);
-  void setReplanGoalCallback(const actionlib::SimpleClientGoalState& state, const GenerateFeetPoseResult& result);
-
-  void goalPoseCallback(const actionlib::SimpleClientGoalState& state, const GenerateFeetPoseResult& result);
-
-  bool activate_on_place_feet;
-  bool append;
 
 public Q_SLOTS:
   void setStartStepIndex(int start_step);
@@ -42,9 +30,16 @@ public Q_SLOTS:
   void setActivateOnPlaceFeet(bool activate); //start step plan generation when feet are placed
   void setAppend(bool appending);
 
-Q_SIGNALS:
-  void goalFeetAnswer(vigir_footstep_planning_msgs::Feet goal);
+protected:
+  void appendStepPlan(StepPlanMsg add) override;
 
+private:
+  void replanToIndexCallback(const actionlib::SimpleClientGoalState& state, const GenerateFeetPoseResult& result);
+
+  void goalPoseCallback(const actionlib::SimpleClientGoalState& state, const GenerateFeetPoseResult& result);
+
+  bool activate_on_place_feet;
+  bool append;
 };
 
 

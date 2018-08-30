@@ -129,6 +129,7 @@ catkin_package(
 # include_directories(include)
 include_directories(
   include
+  include/common
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -137,7 +138,6 @@ include_directories(
 qt5_wrap_ui(UIS_HDRS ui_forms/paneldesign.ui)
 qt5_wrap_ui(UIS_HDRS ui_forms/pattern_planning.ui)
 qt5_wrap_ui(UIS_HDRS ui_forms/planning_widget.ui)
-qt5_wrap_ui(UIS_HDRS ui_forms/simple_pattern.ui)
 
 
 qt5_wrap_cpp(MOC_FILES
@@ -150,9 +150,7 @@ qt5_wrap_cpp(MOC_FILES
   include/${PROJECT_NAME}/step_visual.h
   include/${PROJECT_NAME}/planning_widget.h
   include/${PROJECT_NAME}/pattern_widget.h
-  include/${PROJECT_NAME}/widget_base.h
   include/${PROJECT_NAME}/step_property.h
-  include/${PROJECT_NAME}/status_prompt.h
   include/${PROJECT_NAME}/step_plan_helper.h
   include/${PROJECT_NAME}/parameter_set_combo_box.h
   include/${PROJECT_NAME}/feet_visual.h
@@ -167,12 +165,9 @@ set(HEADERS
   include/${PROJECT_NAME}/request_handler_base.h
   include/${PROJECT_NAME}/planning_request_handler.h
   include/${PROJECT_NAME}/pattern_request_handler.h
-  include/${PROJECT_NAME}/share.h
   include/${PROJECT_NAME}/planning_widget.h
   include/${PROJECT_NAME}/pattern_widget.h
-  include/${PROJECT_NAME}/widget_base.h
   include/${PROJECT_NAME}/step_property.h
-  include/${PROJECT_NAME}/status_prompt.h
   include/${PROJECT_NAME}/step_plan_helper.h
   include/${PROJECT_NAME}/parameter_set_combo_box.h
   include/${PROJECT_NAME}/feet_visual.h
@@ -189,9 +184,7 @@ set(SOURCES
   src/pattern_request_handler.cpp
   src/planning_widget.cpp
   src/pattern_widget.cpp
-  src/widget_base.cpp
   src/step_property.cpp
-  src/status_prompt.cpp
   src/step_plan_helper.cpp
   src/parameter_set_combo_box.cpp
   src/feet_visual.cpp

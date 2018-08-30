@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>291</width>
-    <height>358</height>
+    <width>311</width>
+    <height>362</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -44,6 +44,12 @@
       <item row="2" column="1">
        <widget class="QToolButton" name="planningSetGoalToolButton">
         <property name="minimumSize">
+         <size>
+          <width>30</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="maximumSize">
          <size>
           <width>30</width>
           <height>30</height>
@@ -113,7 +119,7 @@
          <string>Compute Step Plan</string>
         </property>
         <property name="shortcut">
-         <string>Return</string>
+         <string>Ctrl+Return</string>
         </property>
        </widget>
       </item>

@@ -386,39 +386,6 @@
            </property>
            <layout class="QGridLayout" name="gridLayout_2">
             <item row="2" column="1">
-             <spacer name="horizontalSpacer_5">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item row="2" column="3">
-             <widget class="QSpinBox" name="displayStepsFromSpinBox"/>
-            </item>
-            <item row="2" column="5">
-             <widget class="QSpinBox" name="displayStepsToSpinBox"/>
-            </item>
-            <item row="2" column="4">
-             <widget class="QLabel" name="displayStepsToLabel">
-              <property name="text">
-               <string>to</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="2">
-             <widget class="QLabel" name="displayStepsFromLabel">
-              <property name="text">
-               <string>From</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="6">
              <spacer name="horizontalSpacer_3">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
@@ -431,6 +398,35 @@
               </property>
              </spacer>
             </item>
+            <item row="2" column="2">
+             <spacer name="horizontalSpacer_6">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label">
+              <property name="minimumSize">
+               <size>
+                <width>130</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Interaction Mode:</string>
+              </property>
+              <property name="buddy">
+               <cstring>interactionModeComboBox</cstring>
+              </property>
+             </widget>
+            </item>
             <item row="2" column="0">
              <widget class="QLabel" name="displayStepsLabel">
               <property name="text">
@@ -438,8 +434,27 @@
               </property>
              </widget>
             </item>
-            <item row="1" column="3" colspan="4">
+            <item row="2" column="5">
+             <widget class="QLabel" name="displayStepsToLabel">
+              <property name="text">
+               <string>to</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="6">
+             <widget class="QSpinBox" name="displayStepsToSpinBox"/>
+            </item>
+            <item row="2" column="4">
+             <widget class="QSpinBox" name="displayStepsFromSpinBox"/>
+            </item>
+            <item row="1" column="2" colspan="6">
              <widget class="QComboBox" name="interactionModeComboBox">
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;interaction mode toggled by clicking on a step&lt;/p&gt;&lt;/bshoody&gt;&lt;/html&gt;</string>
               </property>
@@ -460,13 +475,10 @@
               </item>
              </widget>
             </item>
-            <item row="1" column="0" colspan="3">
-             <widget class="QLabel" name="label">
+            <item row="2" column="3">
+             <widget class="QLabel" name="displayStepsFromLabel">
               <property name="text">
-               <string>Interaction Mode:</string>
-              </property>
-              <property name="buddy">
-               <cstring>interactionModeComboBox</cstring>
+               <string>From</string>
               </property>
              </widget>
             </item>
@@ -500,58 +512,7 @@
       <enum>QFrame::Raised</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="0" column="3">
-       <widget class="QToolButton" name="bothFeetToolButton">
-        <property name="minimumSize">
-         <size>
-          <width>30</width>
-          <height>30</height>
-         </size>
-        </property>
-        <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;(t) place a pair of feet which will be set as goal pose&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-        <property name="text">
-         <string>both</string>
-        </property>
-        <property name="iconSize">
-         <size>
-          <width>30</width>
-          <height>30</height>
-         </size>
-        </property>
-        <property name="shortcut">
-         <string>T</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-        <property name="toolButtonStyle">
-         <enum>Qt::ToolButtonIconOnly</enum>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="9">
-       <spacer name="horizontalSpacer_2">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="0" column="4">
-       <widget class="Line" name="line_2">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="6">
+      <item row="0" column="10">
        <widget class="QToolButton" name="addSequenceToolButton">
         <property name="minimumSize">
          <size>
@@ -577,15 +538,105 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
+      <item row="1" column="4" colspan="10">
+       <widget class="QLabel" name="sequenceDescription">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="text">
+         <string>Add step plan using functions below.</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="13">
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="8">
+       <widget class="Line" name="line_2">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
        <widget class="Line" name="line_4">
         <property name="orientation">
          <enum>Qt::Vertical</enum>
         </property>
        </widget>
       </item>
-      <item row="0" column="7">
-       <widget class="QToolButton" name="removeSequencToolButton">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_6">
+        <property name="minimumSize">
+         <size>
+          <width>80</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Start Feet:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QToolButton" name="startFeetToolButton">
+        <property name="minimumSize">
+         <size>
+          <width>30</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>30</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;(b) place a pair of feet which will be set as goal pose&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>start</string>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>30</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="shortcut">
+         <string>B</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="toolButtonStyle">
+         <enum>Qt::ToolButtonIconOnly</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="9">
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>Sequence:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="11">
+       <widget class="QToolButton" name="removeSequenceToolButton">
         <property name="minimumSize">
          <size>
           <width>30</width>
@@ -607,20 +658,20 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0" colspan="10">
-       <widget class="QLabel" name="sequenceDescription">
-        <property name="enabled">
-         <bool>true</bool>
+      <item row="0" column="3">
+       <spacer name="horizontalSpacer_5">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
         </property>
-        <property name="text">
-         <string>Add step plan using functions below.</string>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
         </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
+       </spacer>
       </item>
-      <item row="0" column="0">
+      <item row="0" column="5">
        <widget class="QPushButton" name="executePushButton">
         <property name="minimumSize">
          <size>
@@ -641,27 +692,13 @@
          <string>Execute </string>
         </property>
         <property name="shortcut">
-         <string>Ctrl+Return</string>
+         <string>Ctrl+Shift+Return</string>
         </property>
         <property name="default">
          <bool>true</bool>
         </property>
         <property name="flat">
          <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="5">
-       <widget class="QLabel" name="label_5">
-        <property name="text">
-         <string>Sequence:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="2">
-       <widget class="QLabel" name="label_6">
-        <property name="text">
-         <string>Place Feet:</string>
         </property>
        </widget>
       </item>

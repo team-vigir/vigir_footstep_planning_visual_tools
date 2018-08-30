@@ -3,14 +3,9 @@
 
 #ifndef Q_MOC_RUN
 
-#include <vigir_footstep_planning_msgs/footstep_planning_msgs.h>
 #include <QObject>
-
-#include <OgreQuaternion.h>
-#include <OgreVector3.h>
-
+#include <vigir_footstep_planning_rviz_plugin/common/common.h>
 #include <actionlib/client/simple_action_client.h>
-#include <actionlib/client/terminal_state.h>
 
 #endif
 
@@ -20,13 +15,6 @@ typedef vigir_footstep_planning_msgs::StepPlanRequestResultConstPtr RequestResul
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::GenerateFeetPoseAction> GenerateFeetPoseActionClient;
 typedef vigir_footstep_planning_msgs::GenerateFeetPoseResultConstPtr GenerateFeetPoseResult;
 
-
-typedef vigir_footstep_planning_msgs::ErrorStatus ErrorStatusMsg;
-typedef vigir_footstep_planning_msgs::StepPlan StepPlanMsg;
-typedef vigir_footstep_planning_msgs::StepPlanRequest RequestMsg;
-typedef vigir_footstep_planning_msgs::Feet FeetMsg;
-typedef vigir_footstep_planning_msgs::Foot FootMsg;
-typedef vigir_footstep_planning_msgs::Step StepMsg;
 
 namespace vigir_footstep_planning_rviz_plugin
 {
@@ -48,35 +36,27 @@ public:
   RequestHandlerBase(QObject *parent = 0);
   virtual ~RequestHandlerBase();
 
-  RequestMsg* request_;
-  StepPlanRequestActionClient ac;
-  GenerateFeetPoseActionClient generate_feet_ac;
-  vigir_footstep_planning_msgs::StepPlan current_step_plan;
-
-  void initialize();
-
+  void connectToActionServer();
   bool checkConnection();
+
   void sendRequest();
   void cancelGoals();
-  void requestStartPose();
-  void setCurrentStepPlan(const vigir_footstep_planning_msgs::StepPlan& step_plan);
-  void setHeaderStamp();
-  void setPlanningMode(int planning_mode);
-  void computeShift(float& x_shift, float& y_shift, float& z_shift, const geometry_msgs::Quaternion &orientation);
-  int last_step_index;
-  int replan_goal_index;
 
-  virtual void appendStepPlan(StepPlanMsg add);
+  void requestStartPose();
+
+  void setPlanningMode(int planning_mode);
+
 
 public Q_SLOTS:
-  void connectToActionServer();
-  void setFrameID(QString frame_id);
+  void setCurrentStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan);
+
   void setFeedbackRequested(bool requested);
-  void addStepPlan();
   void setCurrentGoal(int last_index);
-  //start_foot_selection = RequestMsg::RIGHT or RequestMsg::LEFT
-  void setStartFoot(int start_foot_selection);
+
+  void setStartFoot(int start_foot_selection); //start_foot_selection = RequestMsg::RIGHT or RequestMsg::LEFT
   void setParameterSet(QString parameter_set_name);
+  void setFrameID(QString frame_id);
+
   void resetStepPlan();
 
 Q_SIGNALS:
@@ -84,13 +64,24 @@ Q_SIGNALS:
   void createdSequence(vigir_footstep_planning_msgs::StepPlan sequence); // values need to be updated
   void receivedPlanningFeedback(vigir_footstep_planning_msgs::PlanningFeedback feedback);
   void startFeetAnswer(vigir_footstep_planning_msgs::Feet start);
-  void actionClientConnected(QString name, bool connected);
-  void displayError(QString message);
-  void displayInfo(QString message);
-  void displaySuccess(QString message);
-  void stepPlanGenerationStarted(); // todo
-  void stepPlanGenerationFinished(bool success); // todo
+  void stepPlanGenerationStarted();
+  void stepPlanGenerationFinished(bool success);
 
+protected:
+  void addStepPlan();
+  virtual void appendStepPlan(StepPlanMsg add) {};
+  void setHeaderStamp();
+  void computeShift(float& x_shift, float& y_shift, float& z_shift, const geometry_msgs::Quaternion &orientation);
+
+  vigir_footstep_planning_msgs::StepPlanRequest* request_;
+
+  StepPlanRequestActionClient step_plan_request_ac;
+  GenerateFeetPoseActionClient generate_feet_ac;
+
+  vigir_footstep_planning_msgs::StepPlan current_step_plan;
+
+  int last_step_index;
+  int replan_goal_index;
 private:
   bool feedback_requested_;
 

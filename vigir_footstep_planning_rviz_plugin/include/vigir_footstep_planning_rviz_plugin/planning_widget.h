@@ -4,7 +4,6 @@
 #include <QWidget>
 #include "../../../../../build/vigir_footstep_planning_rviz_plugin/ui_planning_widget.h"
 #include <vigir_footstep_planning_rviz_plugin/planning_request_handler.h>
-#include <vigir_footstep_planning_rviz_plugin/widget_base.h>
 
 namespace rviz
 {
@@ -14,7 +13,7 @@ class Config;
 namespace vigir_footstep_planning_rviz_plugin
 {
 // Handels user interface for planning
-class PlanningWidget : public WidgetBase
+class PlanningWidget : public QWidget
 {
     Q_OBJECT
 public:
@@ -31,25 +30,22 @@ public:
 
 private Q_SLOTS:
     void on_planningComputeCommandLinkButton_clicked();
-    void setParameterSet(QString parameter_set_name);
 
 public Q_SLOTS:
 // invoked from Display
-    void setCurrentStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan); // update step plan if computed in other request handler
     void startPoseRequested();
-    void handleGoalPose(Ogre::Vector3 position, Ogre::Quaternion orientation);
+    void updateGoalPose(vigir_footstep_planning_msgs::Feet goal_pose);
     void setFeedbackRequested(bool requested);
 // invoked from Foot Visuals
     void setLastStep(int last_index);
     void replanToIndex(int index);
     // invoked from panel
-    void resetValues();
     void abort();
-// emit signals
-    void emitFeetToolActivated(bool activated);
+    void setParameterSet(QString parameter_set_name);
 
 Q_SIGNALS:
-  void feetToolActivated(bool active);
+  void setGoalActivated(bool active);
+  void changed();
 };
 
 } // end namespace vigir_footstep_planning_rviz_plugin

@@ -1,4 +1,6 @@
 #include <vigir_footstep_planning_rviz_plugin/pattern_request_handler.h>
+#include <vigir_footstep_planning_msgs/step_plan.h>
+
 #include <QMetaType>
 
 namespace vigir_footstep_planning_rviz_plugin
@@ -11,6 +13,7 @@ PatternRequestHandler::PatternRequestHandler(QObject* parent)
 
 PatternRequestHandler::~PatternRequestHandler()
 {
+  
 }
 
 void PatternRequestHandler::sendPatternRequest(int patternMode, bool append)
@@ -121,8 +124,45 @@ void PatternRequestHandler::setOverride3D(int state)
   }
 }
 
-//--------- End set Pattern Parameters
+// -----------------------
 
+void PatternRequestHandler::appendStepPlan(StepPlanMsg add)
+{
+  vigir_footstep_planning::StepPlan current(current_step_plan);
+  vigir_footstep_planning::StepPlan to_be_added(add);
+
+  for(int i = current_step_plan.steps.size()-1; i > last_step_index; --i)
+  {
+    current.removeStep(i);
+  }
+
+  int i = 0;
+  while(add.steps[i].step_duration == 0)
+  {
+    to_be_added.removeStep(0);
+    ++i;
+  }
+
+  to_be_added.toMsg(add);
+
+  ROS_ERROR("deleted %i steps", i);
+
+  ErrorStatusMsg error_status = current.appendStepPlan(add);
+
+  if(error_status.error == ErrorStatusMsg::NO_ERROR)
+  {
+    StepPlanMsg step_plan;
+    current.toMsg(step_plan);
+    Q_EMIT(stepPlanGenerationFinished(true));
+    Q_EMIT(createdSequence(step_plan)); // sequence is not set as step plan only after it has been updated
+  }
+  else
+  {
+    Q_EMIT(stepPlanGenerationFinished(false));
+    if(current_step_plan.steps.size() > 0)
+      Q_EMIT(createdStepPlan(current_step_plan));
+  }
+}
 
 } // end namespace vigir_footstep_planning_rviz_plugin
 

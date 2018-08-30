@@ -4,10 +4,7 @@
 #ifndef Q_MOC_RUN
 
 #include <QWidget>
-#include <vigir_footstep_planning_msgs/footstep_planning_msgs.h>
-#include <vigir_footstep_planning_rviz_plugin/plant_feet_tool.h>
-#include <OgreQuaternion.h>
-#include <OgreVector3.h>
+#include <vigir_footstep_planning_rviz_plugin/common/common.h>
 #include "../../../../../build/vigir_footstep_planning_rviz_plugin/ui_paneldesign.h"
 
 
@@ -18,10 +15,6 @@ namespace rviz
 class Config;
 }
 
-namespace Ui
-{
-class PanelDesign;
-}
 
 namespace vigir_footstep_planning_rviz_plugin
 {
@@ -29,7 +22,7 @@ namespace vigir_footstep_planning_rviz_plugin
 //  - handles communication between request handlers and display
 //  - handles communication inbetween request handlers
 //  - display interactions forwarded to display (clearScene, displayRange)
-class FootstepPlanningPanel: public QWidget
+class FootstepPlanningPanel: public QWidget, public Ui::PanelDesign
 {
 Q_OBJECT
 public:
@@ -40,40 +33,29 @@ public:
 
   bool checkConnection();
   void setFrameID(const QString frame_id);
-  void handleGoalPose(Ogre::Vector3 position, Ogre::Quaternion orientation);
   void releasePlaceFeet();
-  Ui::PanelDesign* ui_;
 
 public Q_SLOTS:
   void setStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan);
-private:
-  void makePatternConnections();
-  void makePlanningConnections();
-private Q_SLOTS:
+  void updateGoalPose(vigir_footstep_planning_msgs::Feet goal_feet);
   void updateFromTo(vigir_footstep_planning_msgs::StepPlan step_plan);
+
+  void initializeExecutionProgressbar(int max);
+  void updateProgressBar(int val);
+  void updateProgressBarExecutionState(bool success);
+
+  // pass through to planning and pattern widget
+  void startPoseRequested();
+  void setFeedbackRequested(bool requested);
+  void setLastStep(int index);
+  void replanToIndex(int index);
+
+private Q_SLOTS:
   void releaseSetGoalToggle(bool released);
   void on_displayStepsFromSpinBox_valueChanged(int arg1);
   void on_displayStepsToSpinBox_valueChanged(int arg1);
-  void initializeExecutionProgressbar(int max);
-  void updateProgressBar(int val);
   void initializeGenerationProgressbar();
-  void updateProgressBar(bool success);
-
-
-// pass through to planning and pattern widget
-  void setFeedbackRequested(bool requested);
-  void startPoseRequested();
-  void setLastStep(int index);
-  void replanToIndex(int index);
-// emit signals:
-  void emitStartFeetAnswer(vigir_footstep_planning_msgs::Feet start);
-  void emitGoalFeetAnswer(vigir_footstep_planning_msgs::Feet goal);
-  void emitSendPlanningFeedback(vigir_footstep_planning_msgs::PlanningFeedback feedback);
-  void emitFeetToolActivated(bool active);
-  void emitPlaceLeftActivated(bool active);
-  void emitPlaceRightActivated(bool active);
-  void emitPlaceBothActivated(bool active);
-  void emitInteractionModeChanged(int interaction_mode);
+  void updateProgressBarGenerationState(bool success);
 
 Q_SIGNALS:
   // Display options
@@ -82,6 +64,8 @@ Q_SIGNALS:
   void clearStepPlan();
   void clearIM();
   void undo();
+  void undoSequence();
+  void abort();
   void interactionModeChanged(int interaction_mode);
   void executeRequested();
   // pass through of RequestHandlerBase signals (PlanningRequestHandler + PatternRequestHandler)
@@ -89,10 +73,13 @@ Q_SIGNALS:
   void createdSequence(vigir_footstep_planning_msgs::StepPlan sequence);
   void startFeetAnswer(vigir_footstep_planning_msgs::Feet start);
   // PlanningRequestHandler signals
-  void goalFeetAnswer(vigir_footstep_planning_msgs::Feet goal);
   void sendPlanningFeedback(vigir_footstep_planning_msgs::PlanningFeedback feedback);
-  void feetToolActivated(bool active);
   void feetToolActivated(PlantFeetMode mode, bool active);
+  void changed();
+
+private:
+  void setIcons();
+  void makeConnections();
 };
 
 } // end namespace rviz_plugin_tutorials

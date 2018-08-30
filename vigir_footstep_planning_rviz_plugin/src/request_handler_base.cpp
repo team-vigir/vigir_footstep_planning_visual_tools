@@ -8,13 +8,15 @@ namespace vigir_footstep_planning_rviz_plugin
 
 RequestHandlerBase::RequestHandlerBase(QObject* parent)
   : QObject( parent )
-  , ac("step_plan_request", true)
+  , step_plan_request_ac("step_plan_request", true)
   , generate_feet_ac("generate_feet_pose", true)
   , last_step_index(0)
   , replan_goal_index(0)
   , feedback_requested_(false)
 {
-  request_ = new vigir_footstep_planning_msgs::StepPlanRequest();
+  request_ = new RequestMsg();
+  setFrameID("");
+  connectToActionServer();
   qRegisterMetaType<vigir_footstep_planning_msgs::StepPlan>("vigir_footstep_planning_msgs::StepPlan");
   qRegisterMetaType<vigir_footstep_planning_msgs::PlanningFeedback>("vigir_footstep_planning_msgs::PlanningFeedback");
   qRegisterMetaType<vigir_footstep_planning_msgs::Feet>("vigir_footstep_planning_msgs::Feet");
@@ -26,22 +28,17 @@ RequestHandlerBase::~RequestHandlerBase()
   delete request_;
 }
 
-void RequestHandlerBase::initialize()
-{
-  setFrameID(""); //default
-  connectToActionServer();
-}
 
 // ----- Send simple Planning / Pattern Request -----
 void RequestHandlerBase::sendRequest()
 {
-  if(ac.isServerConnected())
+  if(step_plan_request_ac.isServerConnected())
   {
     Q_EMIT(stepPlanGenerationStarted());
     requestStartPose(); //set Current Start to be displayed
     vigir_footstep_planning_msgs::StepPlanRequestGoal goal;
     goal.plan_request = *request_;
-    ac.sendGoal(goal,
+    step_plan_request_ac.sendGoal(goal,
                 boost::bind(&RequestHandlerBase::resultCallback, this, _1, _2),
                 StepPlanRequestActionClient::SimpleActiveCallback(),
                 boost::bind(&RequestHandlerBase::feedbackCallback, this, _1));
@@ -50,7 +47,8 @@ void RequestHandlerBase::sendRequest()
 
 void RequestHandlerBase::resultCallback(const actionlib::SimpleClientGoalState& state, const RequestResult& result)
 {
-  if(result->status.error == vigir_footstep_planning_msgs::ErrorStatus::NO_ERROR)
+  if(state.state_ == actionlib::SimpleClientGoalState::SUCCEEDED
+     && result->status.error == vigir_footstep_planning_msgs::ErrorStatus::NO_ERROR)
   {
     setCurrentStepPlan(result->step_plan);
     Q_EMIT(createdStepPlan(result->step_plan));
@@ -62,6 +60,8 @@ void RequestHandlerBase::resultCallback(const actionlib::SimpleClientGoalState& 
     Q_EMIT(stepPlanGenerationFinished(false));
     if(current_step_plan.steps.size() > 0)
       Q_EMIT(createdStepPlan(current_step_plan)); // todo: doof?
+    else
+      Q_EMIT(createdStepPlan(StepPlanMsg()));
   }
 }
 
@@ -76,8 +76,7 @@ void RequestHandlerBase::feedbackCallback(const vigir_footstep_planning_msgs::St
 
 void RequestHandlerBase::cancelGoals()
 {
-  Q_EMIT(displayInfo("cancel step_plan_request action."));
-  ac.cancelAllGoals();
+  step_plan_request_ac.cancelAllGoals();
 //  generate_feet_ac.cancelAllGoals();
 }
 
@@ -119,7 +118,7 @@ void RequestHandlerBase::setFeedbackRequested(bool requested)
   feedback_requested_=requested;
 }
 
-void RequestHandlerBase::setCurrentStepPlan(const StepPlanMsg& step_plan)
+void RequestHandlerBase::setCurrentStepPlan(StepPlanMsg step_plan)
 {
   current_step_plan = step_plan;
   setCurrentGoal(current_step_plan.steps.size() - 1);
@@ -130,22 +129,13 @@ void RequestHandlerBase::setCurrentStepPlan(const StepPlanMsg& step_plan)
 // --- Action Server Connection:
 void RequestHandlerBase::connectToActionServer()
 {
-  bool connected = ac.waitForServer(ros::Duration(1,0));
-  if(connected)
-    Q_EMIT(actionClientConnected("step_plan_request", true));
-  else
-    Q_EMIT(actionClientConnected("step_plan_request", false));
-
-  connected = generate_feet_ac.waitForServer(ros::Duration(1,0));
-  if(connected)
-    Q_EMIT(actionClientConnected("generate_feet_pose", true));
-  else
-    Q_EMIT(actionClientConnected("generate_feet_pose", false));
+  step_plan_request_ac.waitForServer(ros::Duration(1,0));
+  generate_feet_ac.waitForServer(ros::Duration(1,0));
 }
 
 bool RequestHandlerBase::checkConnection()
 {
-  return ac.isServerConnected();
+  return step_plan_request_ac.isServerConnected();
 }
 // -------
 
@@ -170,16 +160,10 @@ void RequestHandlerBase::startPoseCallback(const actionlib::SimpleClientGoalStat
 {
   if(result->status.error == ErrorStatusMsg::NO_ERROR)
   {
-    if(result->status.warning != ErrorStatusMsg::NO_WARNING)
-    {
-      Q_EMIT(displayError(QString::fromStdString(result->status.warning_msg)));
-    }
     Q_EMIT(startFeetAnswer(result->feet));
   }
   else{
-    Q_EMIT(displayError(QString::fromStdString(result->status.error_msg.c_str())));
-    Q_EMIT(displayInfo(QString("Defaulting start pose to origin")));
-
+    // Set start pose to origin
     vigir_footstep_planning_msgs::GenerateFeetPoseGoal goal;
     goal.request.header.stamp = ros::Time::now();
     goal.request.header.frame_id = request_->header.frame_id;
@@ -237,18 +221,12 @@ void RequestHandlerBase::setCurrentGoal(int last_index)
 
 void RequestHandlerBase::setCurrentGoalCallback(const actionlib::SimpleClientGoalState& state, const GenerateFeetPoseResult& result)
 {
-  if(result->status.error == ErrorStatusMsg::NO_ERROR)
+  if(result->status.error == ErrorStatusMsg::NO_ERROR && state.isDone())
   {
-    if(result->status.warning != ErrorStatusMsg::NO_WARNING)
-    {
-      Q_EMIT(displayError(QString::fromStdString(result->status.warning_msg)));
-    }
     current_step_plan.goal = result->feet;
   }
   else
-  {
-    Q_EMIT(displayError(QString::fromStdString(result->status.error_msg)));
-  }
+    ROS_ERROR("Could not set current goal.");
 }
 // --------------
 
@@ -273,12 +251,12 @@ void RequestHandlerBase::addStepPlan()
       break;
     }
   }
-  if(ac.isServerConnected())
+  if(step_plan_request_ac.isServerConnected())
   {
     Q_EMIT(stepPlanGenerationStarted());
     vigir_footstep_planning_msgs::StepPlanRequestGoal goal;
     goal.plan_request = nextRequest;
-    ac.sendGoal(goal,
+    step_plan_request_ac.sendGoal(goal,
                 boost::bind(&RequestHandlerBase::addStepPlanCallback, this, _1, _2),
                 StepPlanRequestActionClient::SimpleActiveCallback(),
                 boost::bind(&RequestHandlerBase::feedbackCallback, this, _1));
@@ -293,58 +271,14 @@ void RequestHandlerBase::addStepPlanCallback(const actionlib::SimpleClientGoalSt
   }
   else
   {
-    Q_EMIT(displayError(QString("Errors during computation of step plan. ") + QString::fromStdString(result->status.error_msg)));
     Q_EMIT(stepPlanGenerationFinished(false));
     if(current_step_plan.steps.size() > 0)
-      Q_EMIT(createdStepPlan(current_step_plan)); //todo?
+      Q_EMIT(createdStepPlan(current_step_plan));
   }
 }
 
 // overriden by PlanningRequestHandler
-void RequestHandlerBase::appendStepPlan(StepPlanMsg add)
-{
-  vigir_footstep_planning::StepPlan current(current_step_plan);
-  vigir_footstep_planning::StepPlan to_be_added(add);
 
-  for(int i = current_step_plan.steps.size()-1; i > last_step_index; --i)
-  {
-    Q_EMIT(displayInfo(QString("Step was removed")));
-    //ROS_INFO("remove step %i", i);
-    current.removeStep(i);
-  }
-  /*
-   * For pattern_planning: remove first step of next step plan
-   * For start-goal planning: check second step (=start feet) if step_duration is 0
-   * update step duration to the same as the last step [todo]
-   * */
-  to_be_added.removeStep(0);
-  to_be_added.toMsg(add);
-
-  // for start goal planning check second step of generated step plan
-  if(add.steps[0].step_duration == 0)
-  {
-    StepMsg last;
-    current.getLastStep(last);
-    add.steps[0].step_duration = last.step_duration;
-  }
-
-  ErrorStatusMsg error_status = current.appendStepPlan(add);
-
-  if(error_status.error == ErrorStatusMsg::NO_ERROR)
-  {
-    StepPlanMsg step_plan;
-    current.toMsg(step_plan);
-    Q_EMIT(stepPlanGenerationFinished(true));
-    Q_EMIT(createdSequence(step_plan)); // sequence is not set as step plan only after it has been updated
-  }
-  else
-  {
-    Q_EMIT(stepPlanGenerationFinished(false));
-    Q_EMIT(displayError(QString::fromStdString(error_status.error_msg)));
-    if(current_step_plan.steps.size() > 0)
-      Q_EMIT(createdStepPlan(current_step_plan)); //todo?
-  }
-}
 
 void RequestHandlerBase::resetStepPlan()
 {

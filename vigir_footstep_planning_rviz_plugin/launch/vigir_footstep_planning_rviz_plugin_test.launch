@@ -8,5 +8,6 @@
   <rosparam file="$(find vigir_footstep_planning_rviz_plugin)/config/rviz_plugin_params.yaml" command="load" />
   <param name="meshes_path" value="$(find thormang3_description)/meshes/" />
   <param name="icons_path" value="$(find vigir_footstep_planning_rviz_plugin)/media/" />
+  <param name="execute_action_server" value="/johnny5/step_control_module/execute_step_plan" />
   </group>
 </launch>

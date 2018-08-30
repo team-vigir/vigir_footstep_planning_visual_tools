@@ -1,7 +1,6 @@
-#include "../include/vigir_footstep_planning_rviz_plugin/step_plan_helper.h"
+#include <vigir_footstep_planning_rviz_plugin/step_plan_helper.h>
 #include <vigir_footstep_planning_msgs/step_plan.h>
-#include <OgreVector3.h>
-#include <OgreQuaternion.h>
+#include <vigir_footstep_planning_rviz_plugin/common/ogre_visualization_msgs_functions.h>
 
 namespace vigir_footstep_planning_rviz_plugin
 {
@@ -9,31 +8,72 @@ namespace vigir_footstep_planning_rviz_plugin
 StepPlanHelper::StepPlanHelper(QObject *parent)
   : QObject( parent )
   , edit_step_ac("edit_step", true)
-  , execute_step_plan_ac("/johnny5/step_control_module/execute_step_plan", true) // [todo]
   , update_step_plan_ac("update_step_plan", true)
-  , update_foot_ac("update_foot") // not used
-  //, set_step_plan_ac(0)//("", true)
- // , get_step_plan_ac(0)//("", true)
-  , frame_id("")
   , execution_state(-1)
   , last_performed_step(-1)
+  , last_action(GENERAL)
+  , update_positions(false)
 {
-  robot_pose_publisher = nh.advertise<geometry_msgs::PoseStamped>("/robot_pose",1);
+  std::string execute_name;
+  ros::NodeHandle nh;
+  if(nh.getParam("execute_action_server", execute_name))
+    execute_step_plan_ac = new ExecuteStepPlanActionClient(execute_name, true);
+  else
+    ROS_ERROR("Could not find parameter \"execute_action_server\"");
+
+  connectToActionServer();
 }
 
 StepPlanHelper::~StepPlanHelper()
 {
+  delete execute_step_plan_ac;
 }
 
-void StepPlanHelper::setFrameID(QString frameID)
+// ----------- Action Server Connection --------------------------------------------
+void StepPlanHelper::connectToActionServer()
 {
-  frame_id = frameID.toStdString();
+  edit_step_ac.waitForServer(ros::Duration(1,0));
+  if(execute_step_plan_ac)
+    execute_step_plan_ac->waitForServer(ros::Duration(1,0));
+  update_step_plan_ac.waitForServer(ros::Duration(1,0));
 }
 
+bool StepPlanHelper::checkConnectionEditStep()
+{
+  return edit_step_ac.isServerConnected();
+}
+
+bool StepPlanHelper::checkConnectionExecute()
+{
+  if(execute_step_plan_ac)
+    return execute_step_plan_ac->isServerConnected();
+  else
+    return false;
+}
+
+bool StepPlanHelper::checkConnectionUpdateStepPlan()
+{
+  return update_step_plan_ac.isServerConnected();
+}
+
+bool StepPlanHelper::executeStepPlanActive()
+{
+  if(execute_step_plan_ac)
+    return execute_step_plan_ac->isServerConnected();
+
+  return false;
+}
+
+
+// ---------- Step Plan Handling ------------------------------------------
+
+// invoked by signal createdStepPlan
 void StepPlanHelper::setCurrentStepPlan(StepPlanMsg step_plan)
 {
+  //is called when new step plan has been newly generated
+  previous_sequences.clear(); //not in sequence mode any more
+  last_action = GENERAL;
   current_step_plan = step_plan;
-  checkSteps();
   if(update_positions)
   {
     updateStepPlanPositions();
@@ -42,55 +82,88 @@ void StepPlanHelper::setCurrentStepPlan(StepPlanMsg step_plan)
     previous_step_plans.push_back(current_step_plan);
 }
 
+// Accept step plan when edited foot has been dropped, update cost
 void StepPlanHelper::acceptModifiedStepPlan()
 {
-  if(false)
-  {
-    previous_step_plans.push_back(current_step_plan);
-    Q_EMIT(updatedStepPlan(current_step_plan));
-  }
-  else
-  {
-    updateStepPlanCost(current_step_plan); //todo richtig?
-  }
+  last_action = GENERAL;
+  updateStepPlanCost(current_step_plan);
 }
 
-void StepPlanHelper::connectToActionServer()
+void StepPlanHelper::handleSequence(vigir_footstep_planning_msgs::StepPlan sequence)
 {
-  edit_step_connected = edit_step_ac.waitForServer(ros::Duration(1,0));
-  if(edit_step_connected)
+  last_action = ADD_SEQUENCE;
+  previous_sequences.push_back(current_step_plan);
+  updateStepPlanCost(sequence);
+}
+
+// --------- Update Step Plan ---------------------------------------------
+void StepPlanHelper::updateStepPlan(vigir_footstep_planning_msgs::UpdateMode update_mode, vigir_footstep_planning_msgs::StepPlan step_plan)
+{
+  if(update_step_plan_ac.isServerConnected() && step_plan.steps.size() > 0)
   {
-    Q_EMIT(actionClientConnected("edit_step", true));
+    vigir_footstep_planning_msgs::UpdateStepPlanGoal goal;
+    goal.step_plan = step_plan;
+    goal.update_mode = update_mode;
+    update_step_plan_ac.sendGoal(goal,
+                                 boost::bind(&StepPlanHelper::updateStepPlanCallback, this, _1, _2),
+                                 UpdateStepPlanActionClient::SimpleActiveCallback(),
+                                 UpdateStepPlanActionClient::SimpleFeedbackCallback());
   }
   else
-    Q_EMIT(actionClientConnected("edit_step", false));
-
-  execute_connected = execute_step_plan_ac.waitForServer(ros::Duration(1,0));
-  if(execute_connected)
-    Q_EMIT(actionClientConnected("/johnny5/step_control_module/execute_step_plan", true));
-  else
-    Q_EMIT(actionClientConnected("/johnny5/step_control_module/execute_step_plan", false));
-
-  update_plan_connected = update_step_plan_ac.waitForServer(ros::Duration(1,0));
-  if(update_plan_connected)
-    Q_EMIT(actionClientConnected("update_step_plan", true));
-  else
-    Q_EMIT(actionClientConnected("update_step_plan", false));
-
-  update_foot_connected  = update_foot_ac.waitForServer(ros::Duration(1,0));
-  if(update_foot_connected)
-    Q_EMIT(actionClientConnected("update_foot", true));
-  else
-    Q_EMIT(actionClientConnected("update_foot", false));
+  {
+    ROS_INFO("update step plan server not connected");
+  }
 }
 
-//[todo]: check connection and update if different
-bool StepPlanHelper::checkConnection()
+void StepPlanHelper::updateStepPlanCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::UpdateStepPlanResultConstPtr& result)
 {
-  return edit_step_ac.isServerConnected();
+  if(!(result->status.error == ErrorStatusMsg::NO_ERROR) || !state.isDone())
+    return;
+
+  if(result->step_plan.steps.size() == current_step_plan.steps.size())
+  {
+    Q_EMIT(updatedStepPlan(result->step_plan));
+  }
+  else
+  {
+    Q_EMIT(createdStepPlan(result->step_plan));
+  }
+  current_step_plan = result->step_plan;
+  previous_step_plans.push_back(result->step_plan);
 }
 
-// Edit Step Update Foot
+void StepPlanHelper::updateStepPlanPositions()
+{
+  vigir_footstep_planning_msgs::UpdateMode update_mode;
+  update_mode.mode = vigir_footstep_planning_msgs::UpdateMode::UPDATE_MODE_3D;
+  updateStepPlan(update_mode, current_step_plan);
+}
+
+void StepPlanHelper::updateStepPlanCost(vigir_footstep_planning_msgs::StepPlan step_plan)
+{
+  //update Step Plan Cost
+  vigir_footstep_planning_msgs::UpdateMode update_mode;
+  update_mode.mode = vigir_footstep_planning_msgs::UpdateMode::UPDATE_MODE_COST;
+  updateStepPlan(update_mode, step_plan);
+}
+
+void StepPlanHelper::setUpdateStepPlanPositions(bool update)
+{
+  this->update_positions = update;
+}
+
+// --------- Modify Step Plan -------------------------------------------
+void StepPlanHelper::trimStepPlan(int last_index)
+{
+  StepPlanMsg trimmed = current_step_plan;
+  trimmed.steps.resize(last_index + 1);
+  Q_EMIT(createdStepPlan(trimmed));
+  previous_step_plans.push_back(trimmed);
+  current_step_plan = trimmed;
+  last_action = GENERAL;
+}
+
+// ----------- Edit Step -------------------------------------------------
 void StepPlanHelper::editStep(vigir_footstep_planning_msgs::EditStep edit_step)
 {
   if(edit_step_ac.isServerConnected())
@@ -110,18 +183,20 @@ void StepPlanHelper::editStep(vigir_footstep_planning_msgs::EditStep edit_step)
 
 void StepPlanHelper::editStepCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::EditStepResultConstPtr& result)
 {
-  if(checkForErrors(result->status))
+  if(!(result->status.error == ErrorStatusMsg::NO_ERROR) || !state.isDone())
     return;
+
   if(result->step_plans.size() == 1)
   {
     current_step_plan = result->step_plans[0];
   }
   else
   {
-    std::vector<StepPlanMsg> step_plans = result->step_plans;
-    combineStepPlans(step_plans);
+    ROS_ERROR("cannot handle deleted step");
+    //    std::vector<StepPlanMsg> step_plans = result->step_plans;
+    //    combineStepPlans(step_plans);
   }
-  checkSteps();
+  checkSteps(); // check steps to display their validity as it is not yet updated
 }
 
 void StepPlanHelper::checkSteps()
@@ -131,7 +206,6 @@ void StepPlanHelper::checkSteps()
     StepMsg step = current_step_plan.steps[i];
     if(!step.valid || step.colliding)
     {
-      //      ROS_ERROR("%i", i);
       Q_EMIT(stepValidUpdate(step.step_index, false));
       if(step.colliding)
         ROS_INFO("colliding");
@@ -141,6 +215,146 @@ void StepPlanHelper::checkSteps()
   }
 }
 
+// --------- Reset, Undo, ... -------------------------------------------
+
+void StepPlanHelper::resetStepPlan()
+{
+  current_step_plan = vigir_footstep_planning_msgs::StepPlan();
+  previous_step_plans.push_back(current_step_plan);
+  previous_sequences.clear();
+  last_action = GENERAL;
+}
+
+void StepPlanHelper::setPreviousStepPlan()
+{
+  StepPlanMsg previous;
+  bool do_nothing = true;
+
+  if(previous_step_plans.size() > 1)
+  {
+    do_nothing = false;
+    previous_step_plans.pop_back();
+    previous = previous_step_plans.back();
+  }
+  switch(last_action)
+  {
+  case GENERAL:
+    break;
+  case ADD_SEQUENCE:
+    // if sequence exists and previous plan has a different number of steps it must undo undid adding of sequence:
+    if(previous_sequences.size() > 0)
+    {
+      if(!do_nothing)
+      {
+        previous_sequences.pop_back(); // remove last added sequence
+        last_action = REMOVE_SEQUENCE;
+      }
+    }
+    break;
+  case REMOVE_SEQUENCE:
+    if(!do_nothing)
+    {
+      previous_sequences.push_back(previous);
+      last_action = ADD_SEQUENCE;
+    }
+    break;
+  }
+
+  if(!do_nothing)
+  {
+    if(previous.steps.size() == current_step_plan.steps.size())
+      Q_EMIT(updatedStepPlan(previous));
+    else
+    {
+      Q_EMIT(createdStepPlan(previous));
+    }
+    current_step_plan = previous;
+  }
+}
+
+void StepPlanHelper::setPreviousSequence()
+{
+  if(previous_sequences.size() > 0)
+  {
+    StepPlanMsg previous = previous_sequences.back();
+    previous_sequences.pop_back();
+    current_step_plan = previous;
+  }
+  else
+  {
+    current_step_plan.steps.clear();
+  }
+  last_action = REMOVE_SEQUENCE;
+  previous_step_plans.push_back(current_step_plan);
+  Q_EMIT(createdStepPlan(current_step_plan));
+}
+
+
+// ----------- Execution -------------------------------------------------
+void StepPlanHelper::executeStepPlan()
+{
+  if(execute_step_plan_ac && execute_step_plan_ac->isServerConnected())
+  {
+    Q_EMIT(executionStarted(current_step_plan.steps.size()));
+    vigir_footstep_planning_msgs::ExecuteStepPlanGoal goal;
+    goal.step_plan = current_step_plan;
+    execute_step_plan_ac->sendGoal(goal,
+                                   boost::bind(&StepPlanHelper::executeStepPlanCallback, this, _1, _2),
+                                   ExecuteStepPlanActionClient::SimpleActiveCallback(),
+                                   boost::bind(&StepPlanHelper::executeStepPlanFeedbackCallback, this, _1));
+
+  }
+  else
+    ROS_WARN("execute_step_plan not available! Please activate an \"execute_step_plan\" action server.");
+
+}
+
+void StepPlanHelper::executeStepPlanCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::ExecuteStepPlanResultConstPtr& result)
+{
+  execution_state = -1;
+  switch(result->controller_state)
+  {
+  case 0: //NOT_READY
+    ROS_ERROR("not ready");
+    break;
+  case 1: // READY
+    ROS_ERROR("ready");
+    break;
+  case 2: // ACTIVE
+    ROS_ERROR("active");
+    break;
+  case 3: // PAUSED
+    ROS_ERROR("paused");
+    break;
+  case 4: // FINISHED
+    Q_EMIT(executionFinished(true));
+    break;
+  case 5: // FAILED
+    Q_EMIT(executionFinished(false));
+    break;
+  }
+}
+
+void StepPlanHelper::executeStepPlanFeedbackCallback(const vigir_footstep_planning_msgs::ExecuteStepPlanFeedbackConstPtr& feedback)
+{
+  if(!(feedback->last_performed_step_index == last_performed_step))
+  {
+    QString message = QStringLiteral("Completed Step %1").arg(feedback->last_performed_step_index)
+        + QStringLiteral(" of %1").arg(current_step_plan.steps.size()-1);
+
+    Q_EMIT(executionFeedback(feedback->last_performed_step_index));
+    last_performed_step = feedback->last_performed_step_index;
+  }
+}
+
+void StepPlanHelper::abortExecution()
+{
+  ROS_ERROR("abort execution");
+  if(execute_step_plan_ac)
+    execute_step_plan_ac->cancelAllGoals();
+}
+
+/*
 void StepPlanHelper::combineStepPlans(std::vector<StepPlanMsg>& step_plans)
 {
   if (step_plans.size() != 2)
@@ -166,21 +380,9 @@ void StepPlanHelper::combineStepPlans(std::vector<StepPlanMsg>& step_plans)
   ROS_INFO("size prev step_plan: %i", (int)previous_step_plans.size());
   Q_EMIT(createdStepPlan(current_step_plan));
 }
+*/
 
-bool StepPlanHelper::checkForErrors(ErrorStatusMsg error_status)
-{
-  if(!error_status.error == ErrorStatusMsg::NO_ERROR)
-  {
-    ROS_ERROR("%s", error_status.error_msg.c_str());
-    return true;
-  }
-  if(error_status.warning != ErrorStatusMsg::NO_WARNING)
-  {
-    ROS_WARN("%s", error_status.warning_msg.c_str());
-  }
-  return false;
-}
-
+/*
 void StepPlanHelper::addStep(const std::string& frame_id, const Ogre::Vector3& position, const Ogre::Quaternion& orientation, unsigned int which_foot, unsigned int step_index)
 {
   //todo: EditStep benutzen?
@@ -198,217 +400,7 @@ void StepPlanHelper::addStep(const std::string& frame_id, const Ogre::Vector3& p
   vigir_footstep_planning::StepPlan current(current_step_plan);
   current.insertStep(step);
   current.toMsg(current_step_plan);
-}
-
-void StepPlanHelper::setRobotPose(Ogre::Vector3 position, Ogre::Quaternion orientation)
-{
-  geometry_msgs::PoseStamped robot_pose;
-  robot_pose.header.stamp = ros::Time::now();
-  robot_pose.header.frame_id = frame_id;
-
-  robot_pose.pose.position.x = position.x;
-  robot_pose.pose.position.y = position.y;
-  robot_pose.pose.position.z = position.z;
-  robot_pose.pose.orientation.x = orientation.x;
-  robot_pose.pose.orientation.y = orientation.y;
-  robot_pose.pose.orientation.z = orientation.z;
-  robot_pose.pose.orientation.w = orientation.w;
-
-  if(ros::ok())
-  {
-    robot_pose_publisher.publish(robot_pose);
-  }
-}
-
-void StepPlanHelper::setPreviousStepPlan()
-{
-  if(previous_step_plans.size() > 1 )
-  {
-    previous_step_plans.pop_back();
-    StepPlanMsg step_plan = previous_step_plans.back();
-    if(step_plan.steps.size() == current_step_plan.steps.size())
-      Q_EMIT(updatedStepPlan(step_plan));
-    else
-      Q_EMIT(createdStepPlan(step_plan));
-
-    current_step_plan = step_plan;
-  }
-}
-
-void StepPlanHelper::executeStepPlan()
-{
-  if(execute_step_plan_ac.isServerConnected())
-  {
-    Q_EMIT(displayInfo(QString("step plan sent to robot")));
-    Q_EMIT(executionStarted(current_step_plan.steps.size()));
-    vigir_footstep_planning_msgs::ExecuteStepPlanGoal goal;
-    goal.step_plan = current_step_plan;
-    execute_step_plan_ac.sendGoal(goal,
-                          boost::bind(&StepPlanHelper::executeStepPlanCallback, this, _1, _2),
-                          ExecuteStepPlanActionClient::SimpleActiveCallback(),
-                          boost::bind(&StepPlanHelper::executeStepPlanFeedbackCallback, this, _1));
-
-  }
-  else
-    ROS_WARN("execute_step_plan not available! Please activate an \"execute_step_plan\" action server.");
-
-}
-
-void StepPlanHelper::executeStepPlanCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::ExecuteStepPlanResultConstPtr& result)
-{
-  execution_state = -1;
-
-  if(result->status.status==vigir_footstep_planning_msgs::FootstepExecutionStatus::NO_ERROR)
-  {
-    Q_EMIT(displayInfo("Execution of Step Plan finished without Error."));
-  }
-
-  switch(result->controller_state)
-  {
-  case 0: //NOT_READY
-    Q_EMIT(displayInfo(QString("not ready.")));
-    break;
-  case 1: // READY
-    Q_EMIT(displayInfo(QString("ready.")));
-    break;
-  case 2: // ACTIVE
-    Q_EMIT(displayInfo(QString("active.")));
-    break;
-  case 3: // PAUSED
-    Q_EMIT(displayInfo(QString("paused.")));
-    break;
-  case 4: // FINISHED
-    Q_EMIT(displayInfo(QString("finished.")));
-    break;
-  case 5: // FAILED
-    Q_EMIT(displayError(QString("Failed to execute Step Plan.")));
-    break;
-  }
-
-}
-
-void StepPlanHelper::executeStepPlanFeedbackCallback(const vigir_footstep_planning_msgs::ExecuteStepPlanFeedbackConstPtr& feedback)
-{
-  if(execution_state != feedback->controller_state)
-  {
-
-    switch(feedback->controller_state)
-    {
-    case 0: //NOT_READY
-      Q_EMIT(displayInfo(QString("not ready.")));
-      break;
-    case 1: // READY
-      Q_EMIT(displayInfo(QString("ready.")));
-      break;
-    case 2: // ACTIVE
-      Q_EMIT(displayInfo(QString("active.")));
-      break;
-    case 3: // PAUSED
-      Q_EMIT(displayInfo(QString("paused.")));
-      break;
-    case 4: // FINISHED
-      Q_EMIT(displayInfo(QString("finished.")));
-      break;
-    case 5: // FAILED
-      Q_EMIT(displayError(QString("Failed to execute Step Plan.")));
-      break;
-    }
-
-    execution_state = feedback->controller_state;
-  }
-  if(!(feedback->last_performed_step_index == last_performed_step))
-  {
-    QString message = QStringLiteral("Completed Step %1").arg(feedback->last_performed_step_index)
-        + QStringLiteral(" of %1").arg(current_step_plan.steps.size()-1);
-    Q_EMIT(displayInfo(message));
-
-    Q_EMIT(executionFeedback(feedback->last_performed_step_index));
-    last_performed_step = feedback->last_performed_step_index;
-
-  }
-}
-
-void StepPlanHelper::updateStepPlan(vigir_footstep_planning_msgs::UpdateMode update_mode, vigir_footstep_planning_msgs::StepPlan step_plan)
-{
-  if(update_step_plan_ac.isServerConnected())
-  {
-    vigir_footstep_planning_msgs::UpdateStepPlanGoal goal;
-    goal.step_plan = step_plan;
-    goal.update_mode = update_mode;
-    update_step_plan_ac.sendGoal(goal,
-                          boost::bind(&StepPlanHelper::updateStepPlanCallback, this, _1, _2),
-                          UpdateStepPlanActionClient::SimpleActiveCallback(),
-                          UpdateStepPlanActionClient::SimpleFeedbackCallback());
-  }
-  else
-  {
-    ROS_INFO("update step plan server not connected");
-  }
-}
-
-void StepPlanHelper::updateStepPlanCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::UpdateStepPlanResultConstPtr& result)
-{
-  if(checkForErrors(result->status))
-    return;
-  if(result->step_plan.steps.size() == current_step_plan.steps.size())
-    Q_EMIT(updatedStepPlan(result->step_plan));
-  else
-    Q_EMIT(createdStepPlan(result->step_plan));
-  current_step_plan = result->step_plan;
-  previous_step_plans.push_back(result->step_plan);
-  checkSteps(); // remove?
-}
-
-void StepPlanHelper::updateStepPlanPositions()
-{
- // if(update_positions)
- // {
-    vigir_footstep_planning_msgs::UpdateMode update_mode;
-    update_mode.mode = vigir_footstep_planning_msgs::UpdateMode::UPDATE_MODE_3D;
-    updateStepPlan(update_mode, current_step_plan);
- // }
-//  else
-//  {
-  //  acceptModifiedStepPlan();
-//  }
-}
-
-void StepPlanHelper::setUpdateStepPlanPositions(bool update)
-{
-  this->update_positions = update;
-}
-
-
-void StepPlanHelper::updateStepPlanCost(vigir_footstep_planning_msgs::StepPlan step_plan)
-{
-  //update Step Plan Cost
-  vigir_footstep_planning_msgs::UpdateMode update_mode;
-  update_mode.mode = vigir_footstep_planning_msgs::UpdateMode::UPDATE_MODE_COST;
-  updateStepPlan(update_mode, step_plan);
-}
-
-void StepPlanHelper::resetStepPlan()
-{
-  current_step_plan = vigir_footstep_planning_msgs::StepPlan();
-}
-
-
-void StepPlanHelper::trimStepPlan(int last_index)
-{
-  StepPlanMsg trimmed = current_step_plan;
-  trimmed.steps.resize(last_index + 1);
-  Q_EMIT(createdStepPlan(trimmed));
-  previous_step_plans.push_back(trimmed);
-  current_step_plan = trimmed;
-}
-
-
-void StepPlanHelper::handleSequence(vigir_footstep_planning_msgs::StepPlan sequence)
-{
-  ROS_ERROR("handle sequence");
-  updateStepPlanCost(sequence);
-}
-
+}*/
 
 
 } // end namespace vigir_footstep_planning_rviz_plugin

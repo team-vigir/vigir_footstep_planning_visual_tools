@@ -3,11 +3,10 @@
 
 #ifndef Q_MOC_RUN
 
-#include <vigir_footstep_planning_msgs/footstep_planning_msgs.h>
-#include <actionlib/client/simple_action_client.h>
-#include <OgreVector3.h>
-#include <OgreQuaternion.h>
 #include <QObject>
+#include <vigir_footstep_planning_rviz_plugin/common/common.h>
+#include <actionlib/client/simple_action_client.h>
+
 
 #endif
 
@@ -15,13 +14,7 @@ typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::EditStepActi
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::ExecuteStepPlanAction> ExecuteStepPlanActionClient;
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::UpdateStepPlanAction> UpdateStepPlanActionClient;
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::UpdateFootAction> UpdateFootActionClient;
-typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::SetStepPlanAction> SetStepPlanActionClient;
-typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::GetStepPlanAction> GetStepPlanActionClient;
 
-
-typedef vigir_footstep_planning_msgs::ErrorStatus ErrorStatusMsg;
-typedef vigir_footstep_planning_msgs::StepPlan StepPlanMsg;
-typedef vigir_footstep_planning_msgs::Step StepMsg;
 
 namespace vigir_footstep_planning_rviz_plugin
 {
@@ -32,8 +25,10 @@ namespace vigir_footstep_planning_rviz_plugin
  * check state of step plan
  * check state of steps
  *
- * set current robot pose by publishing /robot_pose topic
 */
+
+enum LastActionType {GENERAL = 0, ADD_SEQUENCE = 1, REMOVE_SEQUENCE = 2};
+
 class StepPlanHelper : public QObject
 {
   Q_OBJECT
@@ -41,20 +36,19 @@ public:
   StepPlanHelper(QObject *parent = 0);
   virtual ~StepPlanHelper();
 
-
-
-
   // Acion Server Connection
-  bool checkConnection();
   void connectToActionServer();
+  bool checkConnectionEditStep();
+  bool checkConnectionExecute();
+  bool checkConnectionUpdateStepPlan();
 
-  // add step at the end of current step plan
-  void addStep(const std::string& frame_id, const Ogre::Vector3& position, const Ogre::Quaternion& orientation, unsigned int which_foot, unsigned int step_index);
 
   // checks if steps of current step plan are valid, emits stepValidUpdate
   void checkSteps();
   // sets if positions should be updated when a new step plan is set
   void setUpdateStepPlanPositions(bool update);
+
+  bool executeStepPlanActive();
 
 public Q_SLOTS:
   // called with edited step, sends goal to edit_step action client, result is handled in editStepCallback
@@ -63,12 +57,10 @@ public Q_SLOTS:
   void executeStepPlan();
   // update current step plan, update positions if requested
   void setCurrentStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan);
-  // sends /robot_pose to update the current robot pose (= starting position)
-  void setRobotPose(Ogre::Vector3 position, Ogre::Quaternion orientation);
-  // Frame ID is updated
-  void setFrameID(QString frameID);
   // invoked from clicking undo button set to previous step plan in list previous_step_plans
   void setPreviousStepPlan();
+  // remove last added sequence part
+  void setPreviousSequence();
   // called after interaction with foot, when foot is dropped, to update current step plan
   void acceptModifiedStepPlan();
   // The step plan positions will be updated to fit the current terrain
@@ -81,6 +73,7 @@ public Q_SLOTS:
   void trimStepPlan(int last_index);
   // Handle a generated sequence by updating cost
   void handleSequence(vigir_footstep_planning_msgs::StepPlan sequence);
+  void abortExecution();
 
 Q_SIGNALS:
   // emitted from checkSteps() to update step visuals to display their validity
@@ -91,13 +84,9 @@ Q_SIGNALS:
   void updatedStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan);
   // signal to communicate that execution has started, this will invoke initialization of the progress bar
   void executionStarted(int nofSteps);
+  void executionFinished(bool success);
   // signal with execution feedback emitting last finished step, this is displayed in the progress bar
   void executionFeedback(int last_performed);
-  // signals to pass information to be displayed in output [TODO]
-  void actionClientConnected(QString name, bool connected);
-  void displayError(QString message);
-  void displayInfo(QString message);
-  void displaySuccess(QString message);
 
 
 private:
@@ -108,41 +97,34 @@ private:
   void updateStepPlanCallback(const actionlib::SimpleClientGoalState& state, const vigir_footstep_planning_msgs::UpdateStepPlanResultConstPtr& result);
   // called to start update_step_plan action client with the wanted update mode (called by updateStepPlanPositions, updateStepPlanCost)
   void updateStepPlan(vigir_footstep_planning_msgs::UpdateMode update_mode, vigir_footstep_planning_msgs::StepPlan step_plan);
-  // combine 2 step plans after a step has been deleted [TODO]
-  void combineStepPlans(std::vector<StepPlanMsg>& step_plans);
-  // returns true if errors were found false if not
-  bool checkForErrors(ErrorStatusMsg error_status);
 
-  //stores the last step plans, previous_step_plans[size()-1] = current_step_plan
-  std::vector<vigir_footstep_planning_msgs::StepPlan> previous_step_plans;
+
   // the currently displayed step plan
   StepPlanMsg current_step_plan;
 
-  ros::NodeHandle nh;
-  ros::Publisher robot_pose_publisher;
   // Action Clients:
   EditStepActionClient edit_step_ac;
-  ExecuteStepPlanActionClient execute_step_plan_ac;
   UpdateStepPlanActionClient update_step_plan_ac;
-  UpdateFootActionClient update_foot_ac;
-//  SetStepPlanActionClient set_step_plan_ac;
- // GetStepPlanActionClient get_step_plan_ac;
+  ExecuteStepPlanActionClient* execute_step_plan_ac;
 
-  std::string frame_id;
+  bool update_positions;
 
 // For Execution Status:
   int execution_state;
   int last_performed_step;
-// ------
-  bool update_positions;
+  /*
+   * Possible Actions:
+   * - Step Plan was created -> GENERAL
+   * - Step was edited -> GENERAL
+   * - Part of Sequence was added -> ADD_SEQUENCE
+   * - Last Part of Sequence was removed -> REMOVE_SEQUENCE
+   * */
+  LastActionType last_action;
 
-  // Keep track of action client connection
-  bool edit_step_connected;
-  bool execute_connected;
-  bool update_plan_connected;
-  bool update_foot_connected;
+  //stores the last step plans, previous_step_plans.back() = current_step_plan
+  std::vector<vigir_footstep_planning_msgs::StepPlan> previous_step_plans;
+  std::vector<vigir_footstep_planning_msgs::StepPlan> previous_sequences;
 };
-
 
 } // end namespace vigir_footstep_planning_rviz_plugin
 

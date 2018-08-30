@@ -5,61 +5,87 @@
 namespace vigir_footstep_planning_rviz_plugin {
 
 PatternWidget::PatternWidget(QWidget *parent) :
-    WidgetBase(parent),
+    QWidget(parent),
     ui(new Ui::PatternWidget)
 {
     ui->setupUi(this);
     request_handler_ = new PatternRequestHandler();
 
     //Pattern Planning Parameter Signal Slot connection, set request handler values --------------------------
-    connect(ui->patternNOStepsSpinBox,SIGNAL(valueChanged(int)), request_handler_, SLOT(setNoSteps(int)));
-    connect(ui->patternStepDistanceSpinBox,SIGNAL(valueChanged(double)), request_handler_, SLOT(setStepDistance(double)));
-    connect(ui->patternSideStepDoubleSpinBox, SIGNAL(valueChanged(double)), request_handler_, SLOT(setSideStep(double)));
-    connect(ui->patternRotationSpinBox, SIGNAL(valueChanged(int)), request_handler_, SLOT(setTurnAngle(int)));
-    connect(ui->patternDeltaZDoubleSpinBox, SIGNAL(valueChanged(double)), request_handler_, SLOT(setdz(double)));
+    connect(ui->patternNOStepsSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), request_handler_, &PatternRequestHandler::setNoSteps);
+    connect(ui->patternNOStepsSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &PatternWidget::changed);
+
+    connect(ui->patternStepDistanceSpinBox,static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), request_handler_, &PatternRequestHandler::setStepDistance);
+    connect(ui->patternStepDistanceSpinBox,static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), this, &PatternWidget::changed);
+
+    connect(ui->patternSideStepDoubleSpinBox, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), request_handler_, &PatternRequestHandler::setSideStep);
+    connect(ui->patternSideStepDoubleSpinBox, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), this, &PatternWidget::changed);
+
+    connect(ui->patternRotationSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), request_handler_, &PatternRequestHandler::setTurnAngle);
+    connect(ui->patternRotationSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &PatternWidget::changed);
+
+    connect(ui->patternDeltaZDoubleSpinBox, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), request_handler_, &PatternRequestHandler::setdz);
+    connect(ui->patternDeltaZDoubleSpinBox, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), this, &PatternWidget::changed);
+
     //More Pattern Parameter
-    connect(ui->patternStartIndexSpinBox, SIGNAL(valueChanged(int)), request_handler_,SLOT(setStartStepIndex(int)));
-    connect(ui->patternRollSpinBox, SIGNAL(valueChanged(int)),request_handler_,SLOT(setRoll(int)));
-    connect(ui->patternPitchSpinBox, SIGNAL(valueChanged(int)), request_handler_,SLOT(setPitch(int)));
-    connect(ui->patternStartFootComboBox, SIGNAL(currentIndexChanged(int)), request_handler_, SLOT(setStartFoot(int)));
+    connect(ui->patternStartIndexSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), request_handler_, &PatternRequestHandler::setStartStepIndex);
+    connect(ui->patternStartIndexSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &PatternWidget::changed);
+
+    connect(ui->patternRollSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), request_handler_, &PatternRequestHandler::setRoll);
+    connect(ui->patternRollSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &PatternWidget::changed);
+
+    connect(ui->patternPitchSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), request_handler_,&PatternRequestHandler::setPitch);
+    connect(ui->patternPitchSpinBox, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &PatternWidget::changed);
+
+    connect(ui->patternStartFootComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), request_handler_, &PatternRequestHandler::setStartFoot);
+    connect(ui->patternStartFootComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &PatternWidget::changed);
+
+
     //CheckBoxes:
-    connect(ui->patternClosingStepCheckBox, SIGNAL(stateChanged(int)), request_handler_, SLOT(setClosingStep(int)));
-    connect(ui->patternExtraSeperationCheckBox, SIGNAL(stateChanged(int)), request_handler_,SLOT(setExtraSeperation(int)));
-    connect(ui->patternTerrainModelCheckBox, SIGNAL(stateChanged(int)), request_handler_,SLOT(setUseTerrainModel(int)));
-    connect(ui->patternOverride3DCheckBox, SIGNAL(stateChanged(int)), request_handler_,SLOT(setOverride3D(int)));
+    connect(ui->patternClosingStepCheckBox, &QCheckBox::stateChanged, request_handler_, &PatternRequestHandler::setClosingStep);
+    connect(ui->patternClosingStepCheckBox, &QCheckBox::stateChanged, this, &PatternWidget::changed);
+
+    connect(ui->patternExtraSeperationCheckBox, &QCheckBox::stateChanged, request_handler_, &PatternRequestHandler::setExtraSeperation);
+    connect(ui->patternExtraSeperationCheckBox, &QCheckBox::stateChanged, this, &PatternWidget::changed);
+
+    connect(ui->patternTerrainModelCheckBox, &QCheckBox::stateChanged, request_handler_, &PatternRequestHandler::setUseTerrainModel);
+    connect(ui->patternTerrainModelCheckBox, &QCheckBox::stateChanged, this, &PatternWidget::changed);
+
+    connect(ui->patternOverride3DCheckBox, &QCheckBox::stateChanged, request_handler_, &PatternRequestHandler::setOverride3D);
+    connect(ui->patternOverride3DCheckBox, &QCheckBox::stateChanged, this, &PatternWidget::changed);
+
+    connect(ui->patternMoreOptionsGroupBox, &QGroupBox::toggled, this, &PatternWidget::changed);
 }
 
 PatternWidget::~PatternWidget()
 {
+  
   delete ui;
   delete request_handler_;
 }
 
 void PatternWidget::initialize()
 {
-  request_handler_->initialize();
   ui->patternMoreOptionsGroupBox->setChecked(false);
 }
 
 void PatternWidget::save( rviz::Config config ) const
 {
-  config.mapSetValue("sequenceCheckBox", ui->sequenceCheckBox->isChecked());
-
-  config.mapSetValue("NOStepsSpinBox", ui->patternNOStepsSpinBox->value());
-  config.mapSetValue("StepDistanceSpinBox", ui->patternStepDistanceSpinBox->value());
-  config.mapSetValue("SideStepDoubleSpinBox", ui->patternSideStepDoubleSpinBox->value());
-  config.mapSetValue("RotationSpinBox", ui->patternRotationSpinBox->value());
-  config.mapSetValue("DeltaZDoubleSpinBox", ui->patternDeltaZDoubleSpinBox->value());
-  config.mapSetValue("ClosingStepCheckBox", ui->patternClosingStepCheckBox->isChecked());
+  config.mapSetValue("pattern::NOStepsSpinBox", ui->patternNOStepsSpinBox->value());
+  config.mapSetValue("pattern::StepDistanceSpinBox", ui->patternStepDistanceSpinBox->value());
+  config.mapSetValue("pattern::SideStepDoubleSpinBox", ui->patternSideStepDoubleSpinBox->value());
+  config.mapSetValue("pattern::RotationSpinBox", ui->patternRotationSpinBox->value());
+  config.mapSetValue("pattern::DeltaZDoubleSpinBox", ui->patternDeltaZDoubleSpinBox->value());
+  config.mapSetValue("pattern::ClosingStepCheckBox", ui->patternClosingStepCheckBox->isChecked());
   // More options
-  config.mapSetValue("MoreOptionsGroup", ui->patternMoreOptionsGroupBox->isChecked());
-  config.mapSetValue("StartIndexSpinBox", ui->patternStartIndexSpinBox->value());
-  config.mapSetValue("RollSpinBox", ui->patternRollSpinBox->value());
-  config.mapSetValue("PitchSpinBox", ui->patternPitchSpinBox->value());
-  config.mapSetValue("ExtraSeperationCheckBox", ui->patternExtraSeperationCheckBox->isChecked());
-  config.mapSetValue("TerrainModelCheckBox", ui->patternTerrainModelCheckBox->isChecked());
-  config.mapSetValue("Override3DCheckBox", ui->patternOverride3DCheckBox->isChecked());
-  config.mapSetValue("StartFootComboBox", ui->patternStartFootComboBox->currentIndex());
+  config.mapSetValue("pattern::MoreOptionsGroup", ui->patternMoreOptionsGroupBox->isChecked());
+  config.mapSetValue("pattern::StartIndexSpinBox", ui->patternStartIndexSpinBox->value());
+  config.mapSetValue("pattern::RollSpinBox", ui->patternRollSpinBox->value());
+  config.mapSetValue("pattern::PitchSpinBox", ui->patternPitchSpinBox->value());
+  config.mapSetValue("pattern::ExtraSeperationCheckBox", ui->patternExtraSeperationCheckBox->isChecked());
+  config.mapSetValue("pattern::TerrainModelCheckBox", ui->patternTerrainModelCheckBox->isChecked());
+  config.mapSetValue("pattern::Override3DCheckBox", ui->patternOverride3DCheckBox->isChecked());
+  config.mapSetValue("pattern::StartFootComboBox", ui->patternStartFootComboBox->currentIndex());
 }
 
 void PatternWidget::load( const rviz::Config& config )
@@ -68,50 +94,47 @@ void PatternWidget::load( const rviz::Config& config )
   float val_f;
   int val_i;
 
-  config.mapGetBool("sequenceCheckBox", &checked);
-  ui->sequenceCheckBox->setChecked(checked);
-
-  config.mapGetInt("NOStepsSpinBox", &val_i);
+  config.mapGetInt("pattern::NOStepsSpinBox", &val_i);
   ui->patternNOStepsSpinBox->setValue(val_i);
 
-  config.mapGetFloat("StepDistanceSpinBox", &val_f);
+  config.mapGetFloat("pattern::StepDistanceSpinBox", &val_f);
   ui->patternStepDistanceSpinBox->setValue(static_cast<double>(val_f));
 
-  config.mapGetFloat("SideStepDoubleSpinBox",&val_f);
+  config.mapGetFloat("pattern::SideStepDoubleSpinBox",&val_f);
   ui->patternSideStepDoubleSpinBox->setValue(static_cast<double>(val_f));
 
-  config.mapGetInt("RotationSpinBox", &val_i);
+  config.mapGetInt("pattern::RotationSpinBox", &val_i);
   ui->patternRotationSpinBox->setValue(val_i);
 
-  config.mapGetFloat("DeltaZDoubleSpinBox", &val_f);
+  config.mapGetFloat("pattern::DeltaZDoubleSpinBox", &val_f);
   ui->patternDeltaZDoubleSpinBox->setValue(static_cast<double>(val_f));
 
-  config.mapGetBool("ClosingStepCheckBox", &checked);
+  config.mapGetBool("pattern::ClosingStepCheckBox", &checked);
   ui->patternClosingStepCheckBox->setChecked(checked);
 
   // More options --------------------------------------
-  config.mapGetBool("MoreOptionsCheckbox", &checked);
+  config.mapGetBool("pattern::MoreOptionsCheckbox", &checked);
   ui->patternMoreOptionsGroupBox->setChecked(checked);
 
-  config.mapGetInt("StartIndexSpinBox", &val_i);
+  config.mapGetInt("pattern::StartIndexSpinBox", &val_i);
   ui->patternStartIndexSpinBox->setValue(val_i);
 
-  config.mapGetInt("RollSpinBox", &val_i);
+  config.mapGetInt("pattern::RollSpinBox", &val_i);
   ui->patternRollSpinBox->setValue(val_i);
 
-  config.mapGetInt("PitchSpinBox", &val_i);
+  config.mapGetInt("pattern::PitchSpinBox", &val_i);
   ui->patternPitchSpinBox->setValue(val_i);
 
-  config.mapGetBool("ExtraSeperationCheckBox", &checked);
+  config.mapGetBool("pattern::ExtraSeperationCheckBox", &checked);
   ui->patternExtraSeperationCheckBox->setChecked(checked);
 
-  config.mapGetBool("TerrainModelCheckBox", &checked);
+  config.mapGetBool("pattern::TerrainModelCheckBox", &checked);
   ui->patternTerrainModelCheckBox->setChecked(checked);
 
-  config.mapGetBool("Override3DCheckBox", &checked);
+  config.mapGetBool("pattern::Override3DCheckBox", &checked);
   ui->patternOverride3DCheckBox->setChecked(checked);
 
-  config.mapGetInt("StartFootComboBox", &val_i);
+  config.mapGetInt("pattern::StartFootComboBox", &val_i);
   ui->patternStartFootComboBox->setCurrentIndex(val_i);
 }
 
@@ -120,11 +143,6 @@ void PatternWidget::load( const rviz::Config& config )
 void PatternWidget::startPoseRequested()
 {
   request_handler_->requestStartPose();
-}
-
-void PatternWidget::setCurrentStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan)
-{
-  request_handler_->setCurrentStepPlan(step_plan);
 }
 
 void PatternWidget::setFrameID(const QString frame_id)
@@ -144,11 +162,6 @@ void PatternWidget::setLastStep(int last_index)
 }
 
 // ========== Panel Communication =============================
-void PatternWidget::resetValues()
-{
-  //Todo
-}
-
 void PatternWidget::abort()
 {
   request_handler_->cancelGoals();

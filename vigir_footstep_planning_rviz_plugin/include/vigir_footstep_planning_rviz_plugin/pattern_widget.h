@@ -3,7 +3,7 @@
 
 #include "../../../../../build/vigir_footstep_planning_rviz_plugin/ui_pattern_planning.h"
 #include <vigir_footstep_planning_rviz_plugin/pattern_request_handler.h>
-#include <vigir_footstep_planning_rviz_plugin/widget_base.h>
+#include <QWidget>
 
 namespace rviz
 {
@@ -13,7 +13,7 @@ class Config;
 namespace vigir_footstep_planning_rviz_plugin
 {
 // Handels user interface for pattern planning
-class PatternWidget : public WidgetBase
+class PatternWidget : public QWidget
 {
     Q_OBJECT
 public:
@@ -33,15 +33,15 @@ public:
 
 public Q_SLOTS:
     // invoked from panel
-    void resetValues();
     void abort();
     //invoked from display
     void startPoseRequested();
-    void setCurrentStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan);
     //invoked from StepVisual
     void setLastStep(int last_index);
     void setParameterSet(QString parameter_set_name);
 
+Q_SIGNALS:
+    void changed();
 
 private Q_SLOTS:
     void on_patternForwardPushButton_clicked();

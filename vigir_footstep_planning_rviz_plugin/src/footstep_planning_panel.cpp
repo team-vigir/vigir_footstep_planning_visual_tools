@@ -1,4 +1,3 @@
-
 #include <vigir_footstep_planning_rviz_plugin/footstep_planning_panel.h>
 #include <rviz/config.h>
 #include <QIcon>
@@ -7,192 +6,172 @@
 namespace vigir_footstep_planning_rviz_plugin
 {
 FootstepPlanningPanel::FootstepPlanningPanel( QWidget* parent )
-  : QWidget( parent )
-  , ui_(new Ui::PanelDesign)
+  : QWidget(parent)
 {
-  ui_->setupUi(this);
-  // Status Prompt output connections:
-  /*
-  connect(ui_->parameterSetComboBox, SIGNAL(actionClientConnected(QString, bool)), ui_->messageDisplay, SLOT( displayConnection(QString, bool)));
-  connect(ui_->patternWidget->request_handler_, SIGNAL(actionClientConnected(QString, bool)), ui_->messageDisplay, SLOT( displayConnection(QString, bool)));
-  connect(ui_->planningWidget->request_handler_, SIGNAL(actionClientConnected(QString, bool)), ui_->messageDisplay, SLOT( displayConnection(QString, bool)));
+  setupUi(this);
 
-  connect(ui_->patternWidget->request_handler_, SIGNAL(displayInfo(QString)), ui_->messageDisplay, SLOT(displayMessage(QString)));
-  connect(ui_->patternWidget->request_handler_, SIGNAL(displayError(QString)), ui_->messageDisplay, SLOT(displayError(QString)));
-  connect(ui_->patternWidget->request_handler_, SIGNAL(displaySuccess(QString)), ui_->messageDisplay, SLOT(displaySuccess(QString)));
+  parameterSetComboBox->initialize();
+  patternWidget->initialize();
+  planningWidget->initialize();
 
-  connect(ui_->planningWidget->request_handler_, SIGNAL(displayInfo(QString)), ui_->messageDisplay, SLOT(displayMessage(QString)));
-  connect(ui_->planningWidget->request_handler_, SIGNAL(displayError(QString)), ui_->messageDisplay, SLOT(displayError(QString)));
-  connect(ui_->planningWidget->request_handler_, SIGNAL(displaySuccess(QString)), ui_->messageDisplay, SLOT(displaySuccess(QString)));
-  */
-// ---
-  ui_->parameterSetComboBox->initialize();
-  ui_->patternWidget->initialize();
-  ui_->planningWidget->initialize();
+  setIcons();
 
-  // set icons:
+  displayOptionsGroupBox->setChecked(false);
+
+  //moreOptionsGroupBox->setChecked(false);
+  patternWidget->ui->sequenceCheckBox->setVisible(false);
+  planningWidget->ui->sequenceCheckBox->setVisible(false);
+  sequenceDescription->setVisible(false);
+
+  makeConnections();
+}
+
+void FootstepPlanningPanel::setIcons()
+{
   ros::NodeHandle nh;
   std::string icons_path;
   if(nh.getParam("icons_path", icons_path))
   {
-    /*
-    QIcon icon_left(QString::fromStdString(icons_path + "footLeft.png"));
-    if(!icon_left.isNull())
-      ui_->leftFootToolButton->setIcon(icon_left);
-    QIcon icon_right(QString::fromStdString(icons_path + "footRight.png"));
-    if(!icon_right.isNull())
-      ui_->rightFootToolButton->setIcon(icon_right);*/
-    QIcon icon_both(QString::fromStdString(icons_path + "bothFeet.png"));
-    if(!icon_both.isNull())
+    QIcon icon_start(QString::fromStdString(icons_path + "feetGreen.png"));
+    QIcon icon_goal(QString::fromStdString(icons_path + "feetRed.png"));
+
+    if(!icon_goal.isNull() && !icon_start.isNull())
     {
-      ui_->bothFeetToolButton->setIcon(icon_both);
-      ui_->planningWidget->ui->planningSetGoalToolButton->setIcon(icon_both);
+      startFeetToolButton->setIcon(icon_start);
+      planningWidget->ui->planningSetGoalToolButton->setIcon(icon_goal);
     }
     QIcon icon_im(QString::fromStdString("/opt/ros/kinetic/share/rviz/icons/classes/InteractiveMarkers.png"));
     if(!icon_im.isNull())
-      ui_->clearIMPushButton->setIcon(icon_im);
+      clearIMPushButton->setIcon(icon_im);
     QIcon icon_step_plan(QString::fromStdString(icons_path + "stepPlan.png"));
     if(!icon_im.isNull())
-      ui_->clearStepPlanPushButton->setIcon(icon_step_plan);
+      clearStepPlanPushButton->setIcon(icon_step_plan);
   }
+}
 
-
-  ui_->displayOptionsGroupBox->setChecked(false);
-
-  //ui_->moreOptionsGroupBox->setChecked(false);
-  ui_->patternWidget->ui->sequenceCheckBox->setVisible(false);
-  ui_->planningWidget->ui->sequenceCheckBox->setVisible(false);
-  ui_->sequenceDescription->setVisible(false);
-
-
-
-  makePatternConnections();
-  makePlanningConnections();
+void FootstepPlanningPanel::makeConnections()
+{
+  // Created Step Plan ------------------------------------------
+  // update ui on step plan created
+  connect(patternWidget->request_handler_, &PatternRequestHandler::createdStepPlan, this, &FootstepPlanningPanel::updateFromTo );
+  connect(planningWidget->request_handler_, &PlanningRequestHandler::createdStepPlan, this, &FootstepPlanningPanel::updateFromTo);
+  // pass created step plan to display
+  connect(patternWidget->request_handler_, &PatternRequestHandler::createdStepPlan, this, &FootstepPlanningPanel::createdStepPlan);
+  connect(patternWidget->request_handler_, &PatternRequestHandler::createdSequence, this, &FootstepPlanningPanel::createdSequence);
+  connect(planningWidget->request_handler_, &PlanningRequestHandler::createdStepPlan, this, &FootstepPlanningPanel::createdStepPlan);
+  connect(planningWidget->request_handler_, &PlanningRequestHandler::createdSequence, this, &FootstepPlanningPanel::createdSequence);
   // set Step plan if computed in other widget
-  connect(ui_->patternWidget->request_handler_, SIGNAL(createdStepPlan( vigir_footstep_planning_msgs::StepPlan)), ui_->planningWidget, SLOT(setCurrentStepPlan(vigir_footstep_planning_msgs::StepPlan)));
-  connect(ui_->planningWidget->request_handler_, SIGNAL(createdStepPlan( vigir_footstep_planning_msgs::StepPlan)), ui_->patternWidget, SLOT(setCurrentStepPlan(vigir_footstep_planning_msgs::StepPlan)));
- // connect(ui_->patternWidget->request_handler_, SIGNAL(createdStepPlan(vigir_footstep_planning_msgs::StepPlan)), ui_->propertyWidget, SLOT(displayStepPlanProperties(vigir_footstep_planning_msgs::StepPlan)));
- // connect(ui_->planningWidget->request_handler_, SIGNAL(createdStepPlan(vigir_footstep_planning_msgs::StepPlan)), ui_->propertyWidget, SLOT(displayStepPlanProperties(vigir_footstep_planning_msgs::StepPlan)));
+  connect(patternWidget->request_handler_,  &PatternRequestHandler::createdStepPlan, planningWidget->request_handler_, &PlanningRequestHandler::setCurrentStepPlan);
+  connect(planningWidget->request_handler_, &PlanningRequestHandler::createdStepPlan, patternWidget->request_handler_, &PatternRequestHandler::setCurrentStepPlan);
+
+  // pass planning feedback to display
+  connect(planningWidget->request_handler_, &PlanningRequestHandler::receivedPlanningFeedback, this, &FootstepPlanningPanel::sendPlanningFeedback);
+
+  // ---------------------------
+
+  // toggle sequence:
+  connect(addSequenceToolButton, &QToolButton::toggled, patternWidget->ui->sequenceCheckBox, &QCheckBox::setChecked);
+  connect(addSequenceToolButton, &QToolButton::toggled, planningWidget->ui->sequenceCheckBox, &QCheckBox::setChecked);
+
+  // set parameter set
+  connect(parameterSetComboBox, &QComboBox::currentTextChanged, patternWidget, &PatternWidget::setParameterSet);
+  connect(parameterSetComboBox, &QComboBox::currentTextChanged, planningWidget, &PlanningWidget::setParameterSet);
+
+
+  // clear, reset, undo ...
+  connect(clearAllPushButton, &QPushButton::clicked, this, &FootstepPlanningPanel::clearAll);
+  connect(clearAllPushButton, &QPushButton::clicked, this, &FootstepPlanningPanel::clearStepPlan);
+  connect(clearIMPushButton, &QPushButton::clicked, this, &FootstepPlanningPanel::clearIM);
+  connect(clearStepPlanPushButton, &QPushButton::clicked, this, &FootstepPlanningPanel::clearStepPlan);
+
+  connect(this, &FootstepPlanningPanel::clearStepPlan, planningWidget->request_handler_, &PlanningRequestHandler::resetStepPlan);
+  connect(this, &FootstepPlanningPanel::clearStepPlan, patternWidget->request_handler_, &PatternRequestHandler::resetStepPlan);
+
+  connect(undoToolButton, &QToolButton::clicked, this, &FootstepPlanningPanel::undo);
+  connect(removeSequenceToolButton, &QToolButton::clicked, this, &FootstepPlanningPanel::undoSequence);
+
+
+  // pass start feet to display
+  connect(patternWidget->request_handler_, &PatternRequestHandler::startFeetAnswer, this, &FootstepPlanningPanel::startFeetAnswer);
+  connect(planningWidget->request_handler_, &PlanningRequestHandler::startFeetAnswer, this, &FootstepPlanningPanel::startFeetAnswer);
+
+  // abort
+  connect(abortPushButton, &QPushButton::clicked, planningWidget, &PlanningWidget::abort);
+  connect(abortPushButton, &QPushButton::clicked, this, &FootstepPlanningPanel::abort);
 
   // progress bar
-  connect(ui_->planningWidget->request_handler_, SIGNAL(stepPlanGenerationStarted()), this, SLOT(initializeGenerationProgressbar()));
-  connect(ui_->planningWidget->request_handler_, SIGNAL(stepPlanGenerationFinished(bool)), this, SLOT(updateProgressBar(bool)));
-  connect(ui_->patternWidget->request_handler_, SIGNAL(stepPlanGenerationStarted()), this, SLOT(initializeGenerationProgressbar()));
-  connect(ui_->patternWidget->request_handler_, SIGNAL(stepPlanGenerationFinished(bool)), this, SLOT(updateProgressBar(bool)));
+  connect(planningWidget->request_handler_, &PlanningRequestHandler::stepPlanGenerationStarted, this, &FootstepPlanningPanel::initializeGenerationProgressbar);
+  connect(planningWidget->request_handler_, &PlanningRequestHandler::stepPlanGenerationFinished, this, &FootstepPlanningPanel::updateProgressBarGenerationState);
+  connect(patternWidget->request_handler_, &PatternRequestHandler::stepPlanGenerationStarted, this, &FootstepPlanningPanel::initializeGenerationProgressbar);
+  connect(patternWidget->request_handler_, &PatternRequestHandler::stepPlanGenerationFinished, this, &FootstepPlanningPanel::updateProgressBarGenerationState);
 
+  // activate feet tool
+  connect(startFeetToolButton, &QToolButton::toggled, this, [=](bool active){ Q_EMIT(feetToolActivated(START_FEET, active)); });
+  connect(planningWidget, &PlanningWidget::setGoalActivated, this, [=](bool active) { Q_EMIT(feetToolActivated(GOAL_FEET, active));});
 
-  connect(ui_->bothFeetToolButton, SIGNAL(toggled(bool)), this, SLOT(emitPlaceBothActivated(bool)));
-//  connect(ui_->leftFootToolButton, SIGNAL(toggled(bool)), this, SLOT(emitPlaceLeftActivated(bool)));
-//  connect(ui_->rightFootToolButton, SIGNAL(toggled(bool)), this, SLOT(emitPlaceRightActivated(bool)));
+  // execute
+  connect(executePushButton, &QPushButton::clicked, this, &FootstepPlanningPanel::executeRequested);
+  //set default interaction mode
+  connect(interactionModeComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, [=](int index){
+    InteractionMode mode;
+    if(index==0)
+      mode = PLANE;
+    if(index == 1)
+      mode = SIXDOF;
+    if(index == 2)
+      mode = FULLSIXDOF;
+    Q_EMIT(interactionModeChanged(mode));});
 
-  connect(ui_->interactionModeComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(emitInteractionModeChanged(int)));
+  // Emit changed signal
+  connect(interactionModeComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &FootstepPlanningPanel::changed);
+  connect(displayOptionsGroupBox, &QGroupBox::toggled, this, &FootstepPlanningPanel::changed);
+  connect(patternWidget, &PatternWidget::changed, this, &FootstepPlanningPanel::changed);
+  connect(planningWidget, &PlanningWidget::changed, this, &FootstepPlanningPanel::changed);
 
-  connect(ui_->undoToolButton, SIGNAL(clicked()), this, SIGNAL(undo()));
- // connect(ui_->removeSequenceToolButton, SIGNAL(clicked()), this, SIGNAL(undo()));
+  // refresh parameter sets
+  connect(refreshParameterSetsToolButton, SIGNAL(clicked()), parameterSetComboBox, SLOT(updateParameterSetNames()));
 
-  connect(ui_->executePushButton, SIGNAL(clicked()), this, SIGNAL(executeRequested()));
-
-  connect(ui_->refreshParameterSetsToolButton, SIGNAL(clicked()), ui_->parameterSetComboBox, SLOT(updateParameterSetNames()));
-
-  // reset:
-  // clear all button invokes clearAll() and clearStepPlan() (IM are cleared automatically when step plan is cleared)
-  connect(ui_->clearAllPushButton, SIGNAL(clicked()), this, SIGNAL(clearAll()));
-  connect(ui_->clearAllPushButton, SIGNAL(clicked()), this, SIGNAL(clearStepPlan()));
-  connect(ui_->clearStepPlanPushButton, SIGNAL(clicked()), this, SIGNAL(clearStepPlan()));
-  connect(ui_->clearIMPushButton, SIGNAL(clicked()), this, SIGNAL(clearIM()));
-
-}
-
-
-void FootstepPlanningPanel::makePatternConnections()
-{
- //todo connect(this, SIGNAL(resetValues()), ui_->patternWidget, SLOT(resetValues()));
-
-  //connect(ui_->abortPushButton, SIGNAL(clicked()), ui_->patternWidget, SLOT(abort()));
-  // update ui on step plan created
-  connect(ui_->patternWidget->request_handler_, SIGNAL(createdStepPlan( vigir_footstep_planning_msgs::StepPlan))
-          , this, SLOT(updateFromTo(vigir_footstep_planning_msgs::StepPlan)));
-
-  // PatternRequestHandler signals
-  connect(ui_->patternWidget->request_handler_, SIGNAL(createdStepPlan(vigir_footstep_planning_msgs::StepPlan))
-              , this, SIGNAL(createdStepPlan(vigir_footstep_planning_msgs::StepPlan)));
-  connect(ui_->patternWidget->request_handler_, SIGNAL(createdSequence(vigir_footstep_planning_msgs::StepPlan)),
-          this, SIGNAL(createdSequence(vigir_footstep_planning_msgs::StepPlan)));
-  connect(ui_->patternWidget->request_handler_, SIGNAL(startFeetAnswer(vigir_footstep_planning_msgs::Feet)), this
-              , SLOT(emitStartFeetAnswer(vigir_footstep_planning_msgs::Feet)));
-
-  connect(ui_->addSequenceToolButton, SIGNAL(toggled(bool)), ui_->patternWidget->ui->sequenceCheckBox, SLOT(setChecked(bool)));
-  connect(ui_->patternWidget->ui->sequenceCheckBox, SIGNAL(toggled(bool)), ui_->planningWidget->ui->sequenceCheckBox, SLOT(setChecked(bool)));
-
-  connect(ui_->parameterSetComboBox, SIGNAL(currentTextChanged(QString)), ui_->patternWidget, SLOT(setParameterSet(QString)));
-
-  connect(this, SIGNAL(clearStepPlan()), ui_->patternWidget->request_handler_, SLOT(resetStepPlan()));
-}
-
-void FootstepPlanningPanel::makePlanningConnections()
-{
- //todo connect(this, SIGNAL(resetValues()), ui_->planningWidget, SLOT(resetValues()));
-  connect(ui_->abortPushButton, SIGNAL(clicked()), ui_->planningWidget, SLOT(abort()));
-
-  // update ui on step plan created
-  connect(ui_->planningWidget->request_handler_, SIGNAL(createdStepPlan( vigir_footstep_planning_msgs::StepPlan)), this, SLOT(updateFromTo(vigir_footstep_planning_msgs::StepPlan)));
-
-  // PlanningRequestHandler signals
-  connect(ui_->planningWidget->request_handler_, SIGNAL(createdStepPlan(vigir_footstep_planning_msgs::StepPlan))
-              , this, SIGNAL(createdStepPlan(vigir_footstep_planning_msgs::StepPlan)));
-  connect(ui_->planningWidget->request_handler_, SIGNAL(createdSequence(vigir_footstep_planning_msgs::StepPlan)), this,
-          SIGNAL(createdSequence(vigir_footstep_planning_msgs::StepPlan)));
-  connect(ui_->planningWidget->request_handler_, SIGNAL(startFeetAnswer(vigir_footstep_planning_msgs::Feet)), this
-              , SLOT(emitStartFeetAnswer(vigir_footstep_planning_msgs::Feet)));
-  connect(ui_->planningWidget->request_handler_, SIGNAL(goalFeetAnswer(vigir_footstep_planning_msgs::Feet))
-              , this, SLOT(emitGoalFeetAnswer(vigir_footstep_planning_msgs::Feet)));
-  connect(ui_->planningWidget->request_handler_, SIGNAL(receivedPlanningFeedback(vigir_footstep_planning_msgs::PlanningFeedback))
-              , this, SLOT(emitSendPlanningFeedback(vigir_footstep_planning_msgs::PlanningFeedback)));
-
-  connect(ui_->planningWidget, SIGNAL(feetToolActivated(bool)), this, SLOT(emitFeetToolActivated(bool)));
-
-  connect(ui_->addSequenceToolButton, SIGNAL(toggled(bool)), ui_->planningWidget->ui->sequenceCheckBox, SLOT(setChecked(bool)));
-  connect(ui_->planningWidget->ui->sequenceCheckBox, SIGNAL(toggled(bool)), ui_->patternWidget->ui->sequenceCheckBox, SLOT(setChecked(bool)));
-
-  connect(ui_->parameterSetComboBox, SIGNAL(currentTextChanged(QString)), ui_->planningWidget, SLOT(setParameterSet(QString)));
-
-  connect(this, SIGNAL(clearStepPlan()), ui_->planningWidget->request_handler_, SLOT(resetStepPlan()));
 }
 
 FootstepPlanningPanel::~FootstepPlanningPanel()
 {
-  delete ui_;
 }
 
 void FootstepPlanningPanel::save( rviz::Config config ) const
 {
-  ui_->patternWidget->save(config);
-  ui_->planningWidget->save(config);
+  patternWidget->save(config);
+  planningWidget->save(config);
+  config.mapSetValue("panel::DisplayOptionsGroupBox", displayOptionsGroupBox->isChecked());
+  config.mapSetValue("panel::InteractionModeComboBox", interactionModeComboBox->currentIndex());
 }
 
 void FootstepPlanningPanel::load( const rviz::Config& config )
 {
-  ui_->patternWidget->load(config);
-  ui_->planningWidget->load(config);
+  patternWidget->load(config);
+  planningWidget->load(config);
+  bool checked;
+  config.mapGetBool("panel::DisplayOptionsGroupBox", &checked);
+  displayOptionsGroupBox->setChecked(checked);
+  int index;
+  config.mapGetInt("panel::InteractionModeComboBox", &index);
+  interactionModeComboBox->setCurrentIndex(index);
 }
 
 // ----------- From to spin boxes
 void FootstepPlanningPanel::updateFromTo(vigir_footstep_planning_msgs::StepPlan step_plan )
 {
-  ui_->displayStepsToSpinBox->setMaximum(step_plan.steps.size()-1);
-  //Problems because value changed is emitted and old step plan visuals will be updated:
-  //ui_->displayStepsToSpinBox->setValue(step_plan.steps.size()-1);
-  ui_->displayStepsFromSpinBox->setMaximum(step_plan.steps.size()-1);
+  displayStepsToSpinBox->setMaximum(step_plan.steps.size()-1);
+  displayStepsFromSpinBox->setMaximum(step_plan.steps.size()-1);
 }
 
 void FootstepPlanningPanel::on_displayStepsFromSpinBox_valueChanged(int arg1)
 {
-  Q_EMIT(displayRangeChanged(arg1, ui_->displayStepsToSpinBox->value()));
+  Q_EMIT(displayRangeChanged(arg1, displayStepsToSpinBox->value()));
 }
 
 void FootstepPlanningPanel::on_displayStepsToSpinBox_valueChanged(int arg1)
 {
-  Q_EMIT(displayRangeChanged(ui_->displayStepsFromSpinBox->value(), arg1));
+  Q_EMIT(displayRangeChanged(displayStepsFromSpinBox->value(), arg1));
 }
 
 // --------------------------------------------------------------------------------------------
@@ -201,122 +180,99 @@ void FootstepPlanningPanel::on_displayStepsToSpinBox_valueChanged(int arg1)
 
 bool FootstepPlanningPanel::checkConnection()
 {
-  return (ui_->planningWidget->request_handler_->checkConnection() || ui_->patternWidget->request_handler_->checkConnection());
+  return (planningWidget->request_handler_->checkConnection() || patternWidget->request_handler_->checkConnection());
 }
 
 void FootstepPlanningPanel::setFrameID(const QString frame_id)
 {
-  ui_->planningWidget->setFrameID(frame_id);
-  ui_->patternWidget->setFrameID(frame_id);
+  planningWidget->setFrameID(frame_id);
+  patternWidget->setFrameID(frame_id);
 }
 
 void FootstepPlanningPanel::setLastStep(int index)
 {
-  ui_->planningWidget->setLastStep(index);
-  ui_->patternWidget->setLastStep(index);
+  planningWidget->setLastStep(index);
+  patternWidget->setLastStep(index);
 }
 
 void FootstepPlanningPanel::replanToIndex(int index)
 {
-  ui_->planningWidget->replanToIndex(index);
+  planningWidget->replanToIndex(index);
 }
 
-void FootstepPlanningPanel::handleGoalPose(Ogre::Vector3 position, Ogre::Quaternion orientation)
+void FootstepPlanningPanel::updateGoalPose(vigir_footstep_planning_msgs::Feet goal_feet)
 {
-  ui_->planningWidget->handleGoalPose(position, orientation);
+  planningWidget->updateGoalPose(goal_feet);
 }
 
 void FootstepPlanningPanel::releasePlaceFeet()
 {
-  ui_->bothFeetToolButton->setChecked(false);
-//  ui_->rightFootToolButton->setChecked(false);
-//  ui_->leftFootToolButton->setChecked(false);
+  startFeetToolButton->setChecked(false);
 }
 
 void FootstepPlanningPanel::setFeedbackRequested(bool requested)
 {
-  ui_->planningWidget->setFeedbackRequested(requested);
+  planningWidget->setFeedbackRequested(requested);
 }
 
 void FootstepPlanningPanel::startPoseRequested()
 {
-  ui_->planningWidget->startPoseRequested();
+  planningWidget->startPoseRequested();
 }
 
 void FootstepPlanningPanel::setStepPlan(vigir_footstep_planning_msgs::StepPlan step_plan)
 {
-  ui_->planningWidget->setCurrentStepPlan(step_plan);
-  ui_->patternWidget->setCurrentStepPlan(step_plan);
+  planningWidget->request_handler_->setCurrentStepPlan(step_plan);
+  patternWidget->request_handler_->setCurrentStepPlan(step_plan);
 }
 
-
-
-// emit signals
-void FootstepPlanningPanel::emitStartFeetAnswer(vigir_footstep_planning_msgs::Feet start){Q_EMIT(startFeetAnswer(start));}
-void FootstepPlanningPanel::emitGoalFeetAnswer(vigir_footstep_planning_msgs::Feet goal){Q_EMIT(goalFeetAnswer(goal));}
-void FootstepPlanningPanel::emitSendPlanningFeedback(vigir_footstep_planning_msgs::PlanningFeedback feedback){Q_EMIT(sendPlanningFeedback(feedback));}
-void FootstepPlanningPanel::emitFeetToolActivated(bool active){Q_EMIT(feetToolActivated(active));}
-void FootstepPlanningPanel::emitInteractionModeChanged(int index){Q_EMIT(interactionModeChanged(index+1));}
-void FootstepPlanningPanel::emitPlaceLeftActivated(bool active)
-{
-  if(active)
-  {
-    ui_->bothFeetToolButton->setChecked(false);
-    //ui_->rightFootToolButton->setChecked(false);
-  }
-  Q_EMIT(feetToolActivated(LEFT_FOOT, active));
-}
-void FootstepPlanningPanel::emitPlaceRightActivated(bool active)
-{
-  if(active)
-  {
-    ui_->bothFeetToolButton->setChecked(false);
-  //  ui_->leftFootToolButton->setChecked(false);
-  }
-  Q_EMIT(feetToolActivated(RIGHT_FOOT, active));
-}
-void FootstepPlanningPanel::emitPlaceBothActivated(bool active)
-{
-  if(active)
-  {
- //   ui_->leftFootToolButton->setChecked(false);
- //   ui_->rightFootToolButton->setChecked(false);
-  }
-  Q_EMIT(feetToolActivated(BOTH, active));
-}
 
 // Progress bar ------------------------------------------------------------------
 void FootstepPlanningPanel::initializeExecutionProgressbar(int max)
 {
-  ui_->statusProgressBar->setMaximum(max);
-  ui_->statusProgressBar->setValue(1);
-  ui_->statusProgressBar->setTextVisible(true);
-  ui_->statusProgressBar->setFormat("Step Plant sent to robot...");
+  statusProgressBar->setMaximum(max);
+  statusProgressBar->setValue(1);
+  statusProgressBar->setTextVisible(true);
+  statusProgressBar->setFormat("Step Plant sent to robot...");
 }
 
 void FootstepPlanningPanel::updateProgressBar(int val)
 {
   // first progress step = step plan sent to robot
-  ui_->statusProgressBar->setValue(val+1); // step index starts at 0
-  ui_->statusProgressBar->setFormat(QString::number(val) + QString(" / ") + QString::number(ui_->statusProgressBar->maximum()-1));
+  statusProgressBar->setValue(val+1); // step index starts at 0
+  statusProgressBar->setFormat(QString::number(val) + QString(" / ") + QString::number(statusProgressBar->maximum()-1));
 }
 
 void FootstepPlanningPanel::initializeGenerationProgressbar()
 {
-  ui_->statusProgressBar->setRange(0,0);
+  statusProgressBar->setRange(0,0);
 }
 
-void FootstepPlanningPanel::updateProgressBar(bool success)
+void FootstepPlanningPanel::updateProgressBarExecutionState(bool success)
 {
-  ui_->statusProgressBar->setRange(0,1);
-  ui_->statusProgressBar->setValue(1);
-  ui_->statusProgressBar->setValue(ui_->statusProgressBar->maximum());
-  ui_->statusProgressBar->setTextVisible(true);
+  statusProgressBar->setRange(0,1);
+  statusProgressBar->setValue(1);
+  statusProgressBar->setValue(statusProgressBar->maximum());
+  statusProgressBar->setTextVisible(true);
 
   if(success)
-    ui_->statusProgressBar->setFormat("No errors.");
+    statusProgressBar->setFormat("Execution finished, no errors.");
   else
-    ui_->statusProgressBar->setFormat("!Error during computation of step plan!");
+    statusProgressBar->setFormat("!Error during execution of step plan!");
+}
+
+
+void FootstepPlanningPanel::updateProgressBarGenerationState(bool success)
+{
+  statusProgressBar->setRange(0,1);
+  statusProgressBar->setValue(1);
+  statusProgressBar->setValue(statusProgressBar->maximum());
+  statusProgressBar->setTextVisible(true);
+
+  if(success)
+    statusProgressBar->setFormat("No errors.");
+  else
+    statusProgressBar->setFormat("!Error during computation of step plan!");
 
 }
 
