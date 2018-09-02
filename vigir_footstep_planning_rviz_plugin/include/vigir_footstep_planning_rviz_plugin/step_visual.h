@@ -64,7 +64,7 @@ public:
   // Updating -----------------------------------------
   void setPosition(const Ogre::Vector3& position );
   void setOrientation(const Ogre::Quaternion& orientation);
-  void setPose(const geometry_msgs::Pose& pose);
+ // void setPose(const geometry_msgs::Pose& pose);
 
 
   void setColor( float r, float g, float b, float a );
@@ -81,11 +81,11 @@ public:
 public Q_SLOTS:
   void visualizeValid(bool valid); // update validity while step is being edited but not yet released, invoked by step plan helper
   void setInteractionMode(InteractionMode interaction_mode); // change default interaction mode invoked by panel
-  void changePose(Ogre::Vector3 new_position, Ogre::Quaternion new_orientation); // invoked by editing of Step Property
+  void editedPose(Ogre::Vector3 new_position, Ogre::Quaternion new_orientation); // invoked by editing of Step Property
   void setButtonInteractiveMarker();
 
 Q_SIGNALS:
-  void stepEdited(vigir_footstep_planning_msgs::EditStep edit);
+  void stepChanged(vigir_footstep_planning_msgs::EditStep edit);
   void cutStepPlanHere(int index);
   void replanToHere(int index);
   void endStepPlanHere(int index);
@@ -115,9 +115,9 @@ private:
   boost::shared_ptr<rviz::MeshShape> foot_;
   rviz::MovableText* text_;
 
-  Ogre::SceneNode* frame_node_;
-  Ogre::SceneNode* foot_frame_node_;
   Ogre::SceneManager* scene_manager_;
+  Ogre::SceneNode* frame_node_;
+  Ogre::SceneNode* foot_node_;
   Ogre::SceneNode* text_node_;
 
   interactive_markers::InteractiveMarkerServer* interactive_marker_server_;
@@ -139,12 +139,8 @@ private:
 
   Ogre::Vector3 scale_; //(0.001,0.001,0.001);
   Ogre::Vector3 mesh_origin_; //(0,0,0.0275); mesh origin
-  Ogre::Vector3 foot_origin_; //(0,+/- 0.14, 0.0075)
-  Ogre::Vector3 frame_origin_;
-  float im_scale; // length of longest side of foot
-
-  Ogre::Vector3 position_; //global coordinates -> transformed according to frame_origin
-  Ogre::Quaternion orientation_;
+  Ogre::Vector3 text_position_;
+  float im_scale;
 };
 
 } // end namespace vigir_footstep_planning_rviz_plugin

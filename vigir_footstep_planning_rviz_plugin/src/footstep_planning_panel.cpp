@@ -129,7 +129,7 @@ void FootstepPlanningPanel::makeConnections()
   connect(planningWidget, &PlanningWidget::changed, this, &FootstepPlanningPanel::changed);
 
   // refresh parameter sets
-  connect(refreshParameterSetsToolButton, SIGNAL(clicked()), parameterSetComboBox, SLOT(updateParameterSetNames()));
+  connect(refreshParameterSetsToolButton, &QToolButton::clicked, parameterSetComboBox, &ParameterSetComboBox::updateParameterSetNames);
 
 }
 

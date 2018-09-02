@@ -5,6 +5,7 @@
 typedef vigir_footstep_planning_msgs::Foot FootMsg;
 typedef vigir_footstep_planning_msgs::Feet FeetMsg;
 typedef vigir_footstep_planning_msgs::Step StepMsg;
+typedef vigir_footstep_planning_msgs::EditStep EditStepMsg;
 typedef vigir_footstep_planning_msgs::StepPlan StepPlanMsg;
 typedef vigir_footstep_planning_msgs::StepPlanRequest RequestMsg;
 typedef vigir_footstep_planning_msgs::FeetPoseRequest FeetPoseRequestMsg;

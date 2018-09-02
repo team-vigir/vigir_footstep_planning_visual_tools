@@ -44,6 +44,8 @@ public:
   FeetVisual( Ogre::SceneManager* scene_manager, Ogre::SceneNode* parent_node, FeetType type);
   virtual ~FeetVisual();
 
+  void setFeetPositioning();
+
   // create visual functions
 //  void createByMessage(const vigir_footstep_planning_msgs::Feet msg);
   void createFeetAt(const Ogre::Vector3& position, const Ogre::Quaternion& orientation);
@@ -53,7 +55,8 @@ public:
   void setFrameOrientation( const Ogre::Quaternion& orientation );
 
   void setVisible(bool visible);
-  void setPose(const Ogre::Vector3& position, const Ogre::Quaternion& orientation);
+  void setRobotPose(const Ogre::Vector3& position, const Ogre::Quaternion& orientation); // set position of visuals in robot frame (during interaction)
+  void setPlannerPose(const vigir_footstep_planning_msgs::Feet& msg); // set position_ & orientation_ in Planner Frame (for interaction)
   void updateFeetMsg(const vigir_footstep_planning_msgs::Feet msg, Ogre::Vector3 frame_position, Ogre::Quaternion frame_orientation);
 
   void initializeInteractiveMarker(interactive_markers::InteractiveMarkerServer* marker_server);
@@ -65,7 +68,6 @@ Q_SIGNALS:
   void feetPoseChanged(Ogre::Vector3 position, Ogre::Quaternion orientation);
 
 private:
-  void setFeetPositioning();
   void computePositioning(Ogre::Vector3& position, const Ogre::Quaternion& orientation);
 
   void setSixDOFInteractiveMarker();
@@ -78,6 +80,8 @@ private:
   void deleteInteractiveMarker();
   void resetInteractiveMarker();
   visualization_msgs::Marker makeMarker();
+  visualization_msgs::InteractiveMarker getInteractiveMarker();
+
 
   // current feet properties
   FeetType feet_type; //START / GOAL

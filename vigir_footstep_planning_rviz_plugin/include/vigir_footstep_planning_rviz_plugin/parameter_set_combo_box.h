@@ -24,7 +24,7 @@ public:
 Q_SIGNALS:
     void actionClientConnected(QString name, bool connected);
 
-private Q_SLOTS:
+public Q_SLOTS:
     void updateParameterSetNames();
 
 private:

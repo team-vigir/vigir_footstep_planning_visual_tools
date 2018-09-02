@@ -33,7 +33,6 @@ FeetVisual::FeetVisual( Ogre::SceneManager* scene_manager,
   feet_visuals_.resize(2);
   feet_visuals_[LEFT].reset(new StepVisual(scene_manager, frame_node_, FootMsg::LEFT));
   feet_visuals_[RIGHT].reset(new StepVisual(scene_manager, frame_node_, FootMsg::RIGHT));
-
   setFeetPositioning();
 }
 
@@ -57,17 +56,17 @@ void FeetVisual::setFeetPositioning()
       && nh.getParam("foot/left/foot_frame/z", frame_z)
       )
   {
-    pos_left.x = 0;
-    pos_left.y = seperation/2;
-    pos_left.z = 0;
+    pos_left.x = -frame_x;
+    pos_left.y = seperation/2-frame_y;
+    pos_left.z = -frame_z;
     if(   nh.getParam("foot/right/foot_frame/x", frame_x)
           && nh.getParam("foot/right/foot_frame/y", frame_y)
           && nh.getParam("foot/right/foot_frame/z", frame_z)
           )
     {
-      pos_right.x = 0;
-      pos_right.y = -seperation/2;
-      pos_right.z = 0;
+      pos_right.x = -frame_x;
+      pos_right.y = -seperation/2-frame_y;
+      pos_right.z = -frame_z;
     }
   }
   else
@@ -88,12 +87,6 @@ void FeetVisual::createFeetAt(const Ogre::Vector3& position, const Ogre::Quatern
   computePositioning(transformed_pos_left, orientation);
   computePositioning(transformed_pos_right, orientation);
 
-  geometry_msgs::Pose pose;
-  getPoseMsg(pose, position+transformed_pos_left, orientation);
-  feet_msg.left.pose = pose;
-  getPoseMsg(pose, position + transformed_pos_right, orientation);
-  feet_msg.right.pose = pose;
-
   feet_visuals_[LEFT]->createVisualAt(position + transformed_pos_left, orientation);
   feet_visuals_[RIGHT]->createVisualAt(position + transformed_pos_right, orientation);
 }
@@ -106,12 +99,15 @@ void FeetVisual::createByMessage(const vigir_footstep_planning_msgs::Feet msg)
   feet_visuals_[RIGHT]->createByFootMsg(msg.right);
   feet_visuals_[LEFT]->createByFootMsg(msg.left);
 
-  orientation_ = feet_visuals_[RIGHT]->getOrientation();
-  position_ = 0.5*(feet_visuals_[LEFT]->getPosition() + feet_visuals_[RIGHT]->getPosition());
+  this->setPlannerPose(msg);
 }
 
-void FeetVisual::setPose(const Ogre::Vector3& position, const Ogre::Quaternion& orientation)
+void FeetVisual::setRobotPose(const Ogre::Vector3& position, const Ogre::Quaternion& orientation)
 {
+  // planner pose
+  position_ = position;
+  orientation_ = orientation;
+  //todo
   Ogre::Vector3 transformed_pos_left = pos_left;
   Ogre::Vector3 transformed_pos_right = pos_right;
   computePositioning(transformed_pos_left, orientation);
@@ -122,8 +118,7 @@ void FeetVisual::setPose(const Ogre::Vector3& position, const Ogre::Quaternion& 
   feet_visuals_[RIGHT]->setPosition(position + transformed_pos_right);
   feet_visuals_[RIGHT]->setOrientation(orientation);
 
-  position_ = position;
-  orientation_ = orientation;
+
 
   geometry_msgs::Pose pose;
   getPoseMsg(pose, position+transformed_pos_left, orientation);
@@ -131,6 +126,27 @@ void FeetVisual::setPose(const Ogre::Vector3& position, const Ogre::Quaternion& 
   getPoseMsg(pose, position + transformed_pos_right, orientation);
   feet_msg.right.pose = pose;
 }
+
+void FeetVisual::setPlannerPose(const FeetMsg& msg)
+{
+  feet_msg = msg;
+
+  ros::NodeHandle nh;
+  ros::ServiceClient client = nh.serviceClient<vigir_footstep_planning_msgs::TransformFeetPosesService>("transform_feet_poses");
+  vigir_footstep_planning_msgs::TransformFeetPosesService srv;
+  srv.request.feet = msg;
+  srv.request.target_frame.data = "planner";
+  if(client.call(srv))
+  {
+    Ogre::Vector3 left = getOgreVector(srv.response.feet.left.pose.position);
+    Ogre::Vector3 right = getOgreVector(srv.response.feet.right.pose.position);
+    position_ = 0.5*(left + right);
+    orientation_ = getOgreQuaternion(srv.response.feet.left.pose.orientation);
+  }
+  else
+    ROS_ERROR("Failed to call service transform_feet_poses");
+}
+
 
 void FeetVisual::updateFeetMsg(const vigir_footstep_planning_msgs::Feet msg, Ogre::Vector3 frame_position, Ogre::Quaternion frame_orientation)
 {
@@ -154,9 +170,7 @@ void FeetVisual::updateFeetMsg(const vigir_footstep_planning_msgs::Feet msg, Ogr
 
   feet_msg = msg;
 
-  orientation_ = feet_visuals_[RIGHT]->getOrientation();
-  position_ = 0.5*(feet_visuals_[LEFT]->getPosition() + feet_visuals_[RIGHT]->getPosition());
-
+  setPlannerPose(msg);
   resetInteractiveMarker();
 }
 
@@ -202,13 +216,8 @@ void FeetVisual::setButtonInteractiveMarker()
     return;
 
   interaction_enabled = false;
-  deleteInteractiveMarker();
 
-  geometry_msgs::Pose current_pose;
-  getPoseMsg(current_pose, position_, orientation_);
-
-  visualization_msgs::InteractiveMarker im = makeInteractiveMarker(feet_type == GOAL ? "goal_feet_im" : "start_feet_im",
-                                                                   frame_id, current_pose, im_scale);
+  visualization_msgs::InteractiveMarker im = getInteractiveMarker();
 
   addButtonControl(im, makeMarker());
   interactive_marker_server_->insert(im, boost::bind(&FeetVisual::processButtonFeedback, this, _1));
@@ -220,13 +229,8 @@ void FeetVisual::setSixDOFInteractiveMarker()
 {
   interaction_enabled = true;
 
-  deleteInteractiveMarker();
+  visualization_msgs::InteractiveMarker im = getInteractiveMarker();
 
-  geometry_msgs::Pose current_pose;
-  getPoseMsg(current_pose, position_, orientation_);
-
-  visualization_msgs::InteractiveMarker im = makeInteractiveMarker(feet_type == GOAL ? "goal_feet_im" : "start_feet_im",
-                                                                   frame_id, current_pose, im_scale);
   addSixDOFControl(im);
   addPlaneControl(im, makeMarker(), false);
 
@@ -239,14 +243,7 @@ void FeetVisual::setPlaneInteractiveMarker()
 {
   interaction_enabled = true;
 
-  deleteInteractiveMarker();
-
-  geometry_msgs::Pose current_pose;
-  getPoseMsg(current_pose, position_, orientation_);
-
-  visualization_msgs::InteractiveMarker im = makeInteractiveMarker(feet_type == GOAL ? "goal_feet_im" : "start_feet_im",
-                                                                   frame_id, current_pose, im_scale);
-
+  visualization_msgs::InteractiveMarker im = getInteractiveMarker();
   addPlaneControl(im, makeMarker(), true);
   interactive_marker_server_->insert(im, boost::bind(&FeetVisual::processInteractionFeedback, this, _1));
   menu_handler.apply(*interactive_marker_server_, im.name);
@@ -260,7 +257,7 @@ void FeetVisual::processInteractionFeedback(const visualization_msgs::Interactiv
 
   if(feedback->event_type == InteractiveMarkerFeedbackMsg::POSE_UPDATE)
   {
-    this->setPose(position, orientation);
+    this->setRobotPose(position, orientation);
   }
   if(feedback->event_type == InteractiveMarkerFeedbackMsg::MOUSE_UP)
   {
@@ -370,9 +367,18 @@ visualization_msgs::Marker FeetVisual::makeMarker()
   color.g = (feet_type == START) ? 1 : 0;
   color.b = 0;
   color.a = 0.4;
-
   visualization_msgs::Marker marker = makeSphereMarker(im_scale, color);
   return marker;
+}
+
+visualization_msgs::InteractiveMarker FeetVisual::getInteractiveMarker()
+{
+  deleteInteractiveMarker(); // remove old interactive marker
+  geometry_msgs::Pose planner_pose;
+  getPoseMsg(planner_pose, position_, orientation_);
+  visualization_msgs::InteractiveMarker im = makeInteractiveMarker(feet_type == GOAL ? "goal_feet_im" : "start_feet_im",
+                                                                   frame_id, planner_pose, im_scale);
+  return im;
 }
 
 

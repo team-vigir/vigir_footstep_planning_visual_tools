@@ -66,6 +66,9 @@ protected:
 public Q_SLOTS:
   void displayStepPlan(const vigir_footstep_planning_msgs::StepPlan& step_plan);
   void setInteractionMode(int interaction_mode);
+  void setGoalFeetPlannerFrameProperty(Ogre::Vector3 position, Ogre::Quaternion orientation);
+  void setStartFeetPlannerFrameProperty(Ogre::Vector3 position, Ogre::Quaternion orientation);
+
 private Q_SLOTS:
   void updateFrameID();
   void displayIndex();
@@ -85,8 +88,8 @@ private Q_SLOTS:
   void visualizeStepCost();
   void setUpdateStepPlan();
   void updateStepVisuals(vigir_footstep_planning_msgs::StepPlan updated_step_plan);
-  void addGoalFeetProperties(vigir_footstep_planning_msgs::Feet goal_feet);
-  void addStartFeetProperties(vigir_footstep_planning_msgs::Feet goal_feet);
+  void addGoalFeetRobotFrameProperties(vigir_footstep_planning_msgs::Feet goal_feet);
+  void addStartFeetRobotFrameProperties(vigir_footstep_planning_msgs::Feet goal_feet);
   void startPoseUpdated();
   void goalPoseUpdated();
   void setGoalVisible();
@@ -122,16 +125,20 @@ private:
 
   vigir_footstep_planning_msgs::StepPlan current_step_plan;
 
+  rviz::StatusProperty* ac_connected_;
   rviz::StringProperty* frame_id_property_;
+
   rviz::BoolProperty* display_index_;
   rviz::BoolProperty* display_feedback_;
-  rviz::StatusProperty* ac_connected_;
   rviz::BoolProperty* visualize_valid_;
   rviz::BoolProperty* visualize_cost_;
+
   rviz::BoolProperty* update_step_plan_positions_;
-  rviz::Property* property_container_;
+  rviz::Property* step_properties_container_;
+
   rviz::BoolProperty* goal_property_container_;
   rviz::BoolProperty* start_property_container_;
+
   std::vector<rviz::Property*> goal_properties;
   std::vector<rviz::Property*> start_properties;
   rviz::VectorProperty* goal_position_property_;

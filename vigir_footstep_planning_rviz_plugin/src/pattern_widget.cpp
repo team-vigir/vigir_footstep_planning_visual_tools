@@ -78,7 +78,7 @@ void PatternWidget::save( rviz::Config config ) const
   config.mapSetValue("pattern::DeltaZDoubleSpinBox", ui->patternDeltaZDoubleSpinBox->value());
   config.mapSetValue("pattern::ClosingStepCheckBox", ui->patternClosingStepCheckBox->isChecked());
   // More options
-  config.mapSetValue("pattern::MoreOptionsGroup", ui->patternMoreOptionsGroupBox->isChecked());
+  config.mapSetValue("pattern::MoreOptionsGroupBox", ui->patternMoreOptionsGroupBox->isChecked());
   config.mapSetValue("pattern::StartIndexSpinBox", ui->patternStartIndexSpinBox->value());
   config.mapSetValue("pattern::RollSpinBox", ui->patternRollSpinBox->value());
   config.mapSetValue("pattern::PitchSpinBox", ui->patternPitchSpinBox->value());
@@ -113,7 +113,7 @@ void PatternWidget::load( const rviz::Config& config )
   ui->patternClosingStepCheckBox->setChecked(checked);
 
   // More options --------------------------------------
-  config.mapGetBool("pattern::MoreOptionsCheckbox", &checked);
+  config.mapGetBool("pattern::MoreOptionsGroupBox", &checked);
   ui->patternMoreOptionsGroupBox->setChecked(checked);
 
   config.mapGetInt("pattern::StartIndexSpinBox", &val_i);

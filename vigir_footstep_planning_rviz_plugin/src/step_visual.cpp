@@ -38,26 +38,18 @@ StepVisual::StepVisual( Ogre::SceneManager* scene_manager,
   , display_index(false)
   , im_scale(0.35)
   , mesh_origin_(0.0f,0.0f,0.0f) // origin of frame
-  , foot_origin_(0.0f, 0.0f, 0.0f) // origin of foot (urdf)
-  , frame_origin_(0.0f,0.f, 0.f) // foot frame origin
 {
   // Frame node of the scene in which the foot is placed
   frame_node_ = parent_node->createChildSceneNode();
   // Frame Node of the foot, handles the right positioning of foot
-  foot_frame_node_ = frame_node_->createChildSceneNode();
-
-  foot_.reset(new rviz::MeshShape(scene_manager_, foot_frame_node_));
+  foot_node_ = frame_node_->createChildSceneNode();
   setFootProperties();
 
+  foot_.reset(new rviz::MeshShape(scene_manager_, foot_node_));
   foot_->setScale(scale_);
 
   if(index >= 0) //start and goal have index -1
     createIndexText();
-
-  if(!(which_foot == FootMsg::LEFT || which_foot == FootMsg::RIGHT))
-  {
-    ROS_ERROR("Invalid index for foot_index, must be Foot::LEFT or ::RIGHT");
-  }
 }
 
 StepVisual::~StepVisual()
@@ -65,7 +57,6 @@ StepVisual::~StepVisual()
   if(interactive_marker_server_)
   {
     deleteInteractiveMarker();
-    interactive_marker_server_->applyChanges();
   }
   // Destroy the frame node since we don't need it anymore.
  scene_manager_->destroySceneNode( frame_node_ );
@@ -93,36 +84,11 @@ void StepVisual::setFootProperties()
   else
     ROS_ERROR("Could not retrieve scale of foot mesh");
 
-  std::string foot = "";
-  if(foot_index ==FootMsg::RIGHT)
-    foot = "right";
-  else
-    foot = "left";
-
-  if(nh.getParam("urdf_properties/foot_origin_"+foot+"/x", x)
-       && nh.getParam("urdf_properties/foot_origin_"+foot+"/y", y)
-       && nh.getParam("urdf_properties/foot_origin_"+foot+"/z", z))
-  {
-    foot_origin_ = Ogre::Vector3(x, y, z);
-  }
-  else
-    ROS_ERROR("Could not retrieve origin of foot");
-
-  double roll, pitch, yaw;
-  if(nh.getParam("foot/" + foot + "/foot_frame/x", x)
-     && nh.getParam("foot/" + foot + "/foot_frame/y", y)
-     && nh.getParam("foot/" + foot + "/foot_frame/z", z)
-     && nh.getParam("foot/" + foot + "/foot_frame/roll", roll)
-     && nh.getParam("foot/" + foot + "/foot_frame/pitch", pitch)
-     && nh.getParam("foot/" + foot + "/foot_frame/yaw", yaw))
-  {
-    frame_origin_ = Ogre::Vector3(x,y,z);
-  }
-  else
-    ROS_ERROR("Could not retrieve origin of foot frame (foot/right/foot_frame/x)");
-
   if(!nh.getParam("foot/size/x", im_scale))
     im_scale = 0.35;
+  text_position_ = Ogre::Vector3::ZERO;
+  if(!nh.getParam("foot/size/z", text_position_.z))
+     text_position_.z = 0.05;
 }
 
 // CREATE VISUAL:
@@ -131,25 +97,17 @@ void StepVisual::createByMessage(const vigir_footstep_planning_msgs::Step& msg)
   current_step = msg;
   cost = msg.cost;
   risk = msg.risk;
-  createVisualAt(Ogre::Vector3(0,0,0), Ogre::Quaternion(1,0,0,0));
-  setPose(msg.foot.pose);
+  createVisualAt(getOgreVector(msg.foot.pose.position), getOgreQuaternion(msg.foot.pose.orientation));
   visualizeValid(msg.valid && !msg.colliding);
 }
 
 void StepVisual::createByFootMsg(const vigir_footstep_planning_msgs::Foot& msg)
 {
-  createVisualAt(Ogre::Vector3(0,0,0), Ogre::Quaternion(1,0,0,0));
-  setPose(msg.pose);
+  createVisualAt(getOgreVector(msg.pose.position), getOgreQuaternion(msg.pose.orientation));
 }
 
 void StepVisual::createVisualAt(const Ogre::Vector3& position, const Ogre::Quaternion& orientation)
 {
-  position_ = Ogre::Vector3(position.x, position.y, position.z);
-  orientation_ = Ogre::Quaternion(orientation.w, orientation.x, orientation.y, orientation.z);
-  if(index>=0)
-  {
-    text_node_->setPosition(position+Ogre::Vector3(0,0,0.05));
-  }
   createFootMesh();
 
   if(foot_index == FootMsg::LEFT)
@@ -161,8 +119,8 @@ void StepVisual::createVisualAt(const Ogre::Vector3& position, const Ogre::Quate
     foot_->setColor(0.0 , 1.0 , 0.0 , 1.0);
   }
 
-  foot_frame_node_->setPosition(position);
-  foot_frame_node_->setOrientation(orientation);
+  setPosition(position);
+  setOrientation(orientation);
 }
 
 void StepVisual::createFootMesh()
@@ -200,7 +158,7 @@ void StepVisual::createFootMesh()
     }
     foot_->endTriangles();
   // 3) Set position of the foot in foot_frame_node
-    foot_->setPosition(mesh_origin_/* - foot_origin_*/);
+    foot_->setPosition(mesh_origin_); //position of mesh relative to robot frame
     foot_->setOrientation(Ogre::Quaternion(1,0,0,0));
   }
   else
@@ -233,44 +191,43 @@ void StepVisual::setPosition( const Ogre::Vector3& position)
 {
   if(index>=0)
   {
-    text_node_->setPosition(position+mesh_origin_+Ogre::Vector3(0,0,0.05));
+    text_node_->setPosition(position+text_position_);
   }
-  foot_frame_node_->setPosition(position);
+  foot_node_->setPosition(position);
 }
-
+/*
 void StepVisual::setPose(const geometry_msgs::Pose& pose)
 {
   Ogre::Quaternion current_orientation = getOgreQuaternion(pose.orientation);
   Ogre::Matrix3 rotMat;
   current_orientation.ToRotationMatrix(rotMat);
   Ogre::Vector3 current_frame_origin = rotMat*frame_origin_;
-  setPosition(getOgreVector(pose.position) /*+ current_frame_origin*/);
+  setPosition(getOgreVector(pose.position));
   setOrientation(current_orientation);
   current_frame_origin += getOgreVector(pose.position);
   //ROS_ERROR("position msg: %f, %f, %f", current_frame_origin.x, current_frame_origin.y, current_frame_origin.z);
 
 }
-
+*/
 void StepVisual::setOrientation( const Ogre::Quaternion& orientation)
 {
-  foot_frame_node_->setOrientation(orientation);
+  foot_node_->setOrientation(orientation);
 }
 
 Ogre::Vector3 StepVisual::getPosition()
 {
-  return foot_frame_node_->getPosition();
+  return foot_node_->getPosition();
 }
 
 Ogre::Quaternion StepVisual::getOrientation()
 {
-  return foot_frame_node_->getOrientation();
+  return foot_node_->getOrientation();
 }
 
 void StepVisual::setColor( float r, float g, float b, float a )
 {
   foot_->setColor( r, g, b, a );
 }
-
 
 void StepVisual::displayIndex(bool visible)
 {
@@ -293,9 +250,9 @@ void StepVisual::createIndexText()
 // called when stepPlanUpdated() was emitted
 void StepVisual::updateStepMsg(const vigir_footstep_planning_msgs::Step updated_msg)
 {
- // setPosition(getOgreVector(updated_msg.foot.pose.position));
- // setOrientation(getOgreQuaternion(updated_msg.foot.pose.orientation));
-  setPose(updated_msg.foot.pose);
+  setPosition(getOgreVector(updated_msg.foot.pose.position));
+  setOrientation(getOgreQuaternion(updated_msg.foot.pose.orientation));
+
   current_step = updated_msg;
   cost = updated_msg.cost;
   risk = updated_msg.risk;
@@ -307,13 +264,14 @@ void StepVisual::updateStepMsg(const vigir_footstep_planning_msgs::Step updated_
 // called from FeetVisual
 void StepVisual::updateFootMsg(const vigir_footstep_planning_msgs::Foot updated_msg)
 {
-  setPose(updated_msg.pose);
+  setPosition(getOgreVector(updated_msg.pose.position));
+  setOrientation(getOgreQuaternion(updated_msg.pose.orientation));
   if(interactive_marker_server_)
     resetInteractiveMarker();
 }
 
 // position changed through editing of step property:
-void StepVisual::changePose(Ogre::Vector3 new_position, Ogre::Quaternion new_orientation)
+void StepVisual::editedPose(Ogre::Vector3 new_position, Ogre::Quaternion new_orientation)
 {
   setPosition(new_position);
   setOrientation(new_orientation);
@@ -327,7 +285,7 @@ void StepVisual::changePose(Ogre::Vector3 new_position, Ogre::Quaternion new_ori
   edit.step = current_step;
   edit.plan_mode = vigir_footstep_planning_msgs::EditStep::EDIT_MODE_FULL;
 
-  Q_EMIT(stepEdited(edit));
+  Q_EMIT(stepChanged(edit));
 }
 
 void StepVisual::visualizeValid(bool valid)
@@ -356,7 +314,7 @@ void StepVisual::visualizeCost(float max)
   if(ratio < 0)
     ratio=0;
 
-  foot_->setColor(1-ratio, 0.0, ratio, 0.9);
+  foot_->setColor(1-ratio, 0.0, ratio, 1);
 }
 
 // Interactive Markers -----------------------------------------------------------------
@@ -390,11 +348,8 @@ void StepVisual::setButtonInteractiveMarker()
   // remove other interactive marker of foot
   deleteInteractiveMarker();
 
-  geometry_msgs::Pose current_pose;
-  getPoseMsg(current_pose, foot_frame_node_->getPosition(), foot_frame_node_->getOrientation());
-
   visualization_msgs::InteractiveMarker im = makeInteractiveMarker("button"+ QString::number(index).toStdString(),
-                                                                       frame_id_, current_pose, im_scale);
+                                                                       frame_id_, current_step.foot.pose, im_scale);
 
   addButtonControl(im, makeMarker());
 
@@ -404,15 +359,13 @@ void StepVisual::setButtonInteractiveMarker()
   menu_handler.apply( *interactive_marker_server_, im.name );
   interactive_marker_server_->applyChanges();
 }
+
 void StepVisual::setPlaneInteractiveMarker()
 {
   deleteInteractiveMarker();
 
-  geometry_msgs::Pose current_pose;
-  getPoseMsg(current_pose, foot_frame_node_->getPosition(), foot_frame_node_->getOrientation());
-
   visualization_msgs::InteractiveMarker im = makeInteractiveMarker("plane"+ QString::number(index).toStdString(),
-                                                                       frame_id_, /*current_pose*/current_step.foot.pose, im_scale);
+                                                                       frame_id_, current_step.foot.pose, im_scale);
 
   addPlaneControl(im, makeMarker(), /*with_rotation*/true);
 
@@ -429,11 +382,8 @@ void StepVisual::setSixDOFInteractiveMarker()
   // Move 6DOF with default controls
   deleteInteractiveMarker();
 
-  geometry_msgs::Pose current_pose;
-  getPoseMsg(current_pose, foot_frame_node_->getPosition(), foot_frame_node_->getOrientation());
-
   InteractiveMarkerMsg im = makeInteractiveMarker("6DOF"+ QString::number(index).toStdString(),
-                                                  frame_id_, current_pose, im_scale);
+                                                  frame_id_, current_step.foot.pose, im_scale);
 
   addSixDOFControl(im);
   addPlaneControl(im, makeMarker(), /*with_rotation*/false);
@@ -448,11 +398,8 @@ void StepVisual::setFullSixDOFInteractiveMarker()
   ROS_INFO("Hold shift to move in/out the camera plane");
   deleteInteractiveMarker();
 
-  geometry_msgs::Pose current_pose;
-  getPoseMsg(current_pose, foot_frame_node_->getPosition(), foot_frame_node_->getOrientation());
-
   InteractiveMarkerMsg im = makeInteractiveMarker("6DOF_withMove3D" + QString::number(index).toStdString(),
-                                                  frame_id_, current_pose, im_scale);
+                                                  frame_id_, current_step.foot.pose, im_scale);
 
   addSixDOFControl(im);
   addMoveSixDOFControl(im, makeMarker());
@@ -492,16 +439,9 @@ void StepVisual::processInteractionFeedback(const visualization_msgs::Interactiv
 {
   if(feedback->event_type == visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE)
   {
-    Ogre::Vector3 current_position = getOgreVector(feedback->pose.position); // position of the drawable
-    Ogre::Quaternion current_orientation = getOgreQuaternion(feedback->pose.orientation);
-    setPosition(current_position);
-    setOrientation(current_orientation);
+    setPosition(getOgreVector(feedback->pose.position));
+    setOrientation(getOgreQuaternion(feedback->pose.orientation));
 
-    Ogre::Matrix3 rotMat;
-    current_orientation.ToRotationMatrix(rotMat);
-    Ogre::Vector3 current_frame_origin = rotMat.Transpose()*frame_origin_;
-
-    //current_step.foot.pose.position = getPositionMsg(current_position - frame_origin_);
     current_step.foot.pose.position = feedback->pose.position;
     current_step.foot.pose.orientation = feedback->pose.orientation;
 
@@ -511,7 +451,7 @@ void StepVisual::processInteractionFeedback(const visualization_msgs::Interactiv
     edit.step = current_step;
     edit.plan_mode = vigir_footstep_planning_msgs::EditStep::EDIT_MODE_FULL;
 
-    Q_EMIT(stepEdited(edit));
+    Q_EMIT(stepChanged(edit));
   }
   if(feedback->event_type == visualization_msgs::InteractiveMarkerFeedback::MOUSE_UP)
   {
@@ -530,7 +470,7 @@ void StepVisual::processMenuFeedback(const FeedbackConstPtr &feedback)
     setButtonInteractiveMarker();
     break;
   case 3: // Delete
-//    removeStep(); unused functionality
+//    removeStep();
     break;
   case 4: // set as last step
     Q_EMIT(endStepPlanHere(index));

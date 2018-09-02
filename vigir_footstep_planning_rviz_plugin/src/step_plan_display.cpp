@@ -114,32 +114,53 @@ void StepPlanDisplay::initializeDisplayProperties()
                                            "Visualizes step cost, where red indicates high and blue low cost.",
                                            visualization_properties_, SLOT(visualizeStepCost()), this);
 
-
-  property_container_ = new rviz::Property("Step Properties",
+  // Step Properties  ---------------------------------------------------
+  step_properties_container_ = new rviz::Property("Step Properties",
                                            QVariant(),
                                            "List of properties of current step plan",
                                            this);
+
+  // Feet Properties ----------------------------------------------------
   goal_property_container_ = new rviz::BoolProperty("Goal Feet",
                                                     false,
                                                     "Properties of current goal pose.",
                                                     this, SLOT(setGoalVisible()));
+  goal_position_property_ = new rviz::VectorProperty("Position",
+                                                     Ogre::Vector3::ZERO,
+                                                     "Middlepoint of goal feet in planner coordinates (relative to sole of foot)",
+                                                     goal_property_container_,
+                                                     SLOT(goalPoseUpdated()),
+                                                     this);
+  goal_orientation_property_ = new rviz::QuaternionProperty("Orientation",
+                                                            Ogre::Quaternion::IDENTITY,
+                                                            "Orientation of goal feet in planner coordinates",
+                                                            goal_property_container_,
+                                                            SLOT(goalPoseUpdated()),
+                                                            this);
   start_property_container_ = new rviz::BoolProperty("Start Feet",
                                                      false,
                                                      "Properties of current starting pose.",
                                                      this, SLOT(setStartVisible()));
+  start_position_property_ = new rviz::VectorProperty("Position",
+                                                     Ogre::Vector3::ZERO,
+                                                     "Middlepoint of start feet in planner coordinates",
+                                                     start_property_container_,
+                                                     SLOT(startPoseUpdated()),
+                                                     this);
+  start_orientation_property_ = new rviz::QuaternionProperty("Orientation",
+                                                            Ogre::Quaternion::IDENTITY,
+                                                            "Orientation of start feet in planner coordinates",
+                                                            start_property_container_,
+                                                            SLOT(startPoseUpdated()),
+                                                            this);
 }
 
 void StepPlanDisplay::makeFeetToolConnections()
 {
-  if(step_plan_helper_)
-    connect(feet_tool_, SIGNAL(newStartPose(vigir_footstep_planning_msgs::Feet)), this, SLOT(addStartFeetProperties(vigir_footstep_planning_msgs::Feet)));
-  connect(feet_tool_, SIGNAL(newStartPose(vigir_footstep_planning_msgs::Feet)), this, SLOT(addStartFeetMsg(vigir_footstep_planning_msgs::Feet)));
-
-  connect(feet_tool_, SIGNAL(newGoalPose(vigir_footstep_planning_msgs::Feet)), this, SLOT(addGoalFeetProperties(vigir_footstep_planning_msgs::Feet)));
-  connect(feet_tool_, SIGNAL(newGoalPose(vigir_footstep_planning_msgs::Feet)), this, SLOT(addGoalFeet(vigir_footstep_planning_msgs::Feet)));
-
+  connect(feet_tool_, &PlantFeetTool::newStartPose, this, &StepPlanDisplay::addStartFeetMsg);
+  connect(feet_tool_, &PlantFeetTool::newGoalPose, this, &StepPlanDisplay::addGoalFeet);
   // pass goal pose to request handler
-  connect(feet_tool_, SIGNAL(newGoalPose(vigir_footstep_planning_msgs::Feet)), panel_, SLOT(updateGoalPose(vigir_footstep_planning_msgs::Feet)));
+  connect(feet_tool_, &PlantFeetTool::newGoalPose, panel_, &FootstepPlanningPanel::updateGoalPose);
 }
 
 void StepPlanDisplay::makePanelConnections()
@@ -164,7 +185,6 @@ void StepPlanDisplay::makePanelConnections()
   // start pose
   connect(this, &StepPlanDisplay::requestStartPose, panel_, &FootstepPlanningPanel::startPoseRequested);
   connect(panel_, &FootstepPlanningPanel::startFeetAnswer, this, &StepPlanDisplay::addStartFeetMsg);
-  connect(panel_, &FootstepPlanningPanel::startFeetAnswer, this, &StepPlanDisplay::addStartFeetProperties);
 
   // save
   connect(panel_, &FootstepPlanningPanel::changed, this, [=](){this->setShouldBeSaved(true);});
@@ -192,7 +212,7 @@ void StepPlanDisplay::makeStepPlanHelperConnections()
   // Abort
   connect(panel_, &FootstepPlanningPanel::abort, step_plan_helper_, &StepPlanHelper::abortExecution);
   // execute
-  connect(panel_, SIGNAL(executeRequested()), step_plan_helper_, SLOT(executeStepPlan()));
+  connect(panel_, &FootstepPlanningPanel::executeRequested, step_plan_helper_, &StepPlanHelper::executeStepPlan);
   connect(step_plan_helper_, &StepPlanHelper::executionStarted, panel_, &FootstepPlanningPanel::initializeExecutionProgressbar);
   connect(step_plan_helper_, &StepPlanHelper::executionFeedback, panel_, &FootstepPlanningPanel::updateProgressBar);
   connect(step_plan_helper_, &StepPlanHelper::executionFinished, panel_, &FootstepPlanningPanel::updateProgressBarExecutionState);
@@ -202,7 +222,7 @@ void StepPlanDisplay::makeStepVisualConnections(const StepVisual* visual)
 {
   if(step_plan_helper_)
   {
-    connect(visual, &StepVisual::stepEdited, step_plan_helper_, &StepPlanHelper::editStep);
+    connect(visual, &StepVisual::stepChanged, step_plan_helper_, &StepPlanHelper::editStep);
     connect(visual, &StepVisual::updateStepsPos, step_plan_helper_, &StepPlanHelper::updateStepPlanPositions);
     connect(visual, &StepVisual::footDropped, step_plan_helper_, &StepPlanHelper::acceptModifiedStepPlan);
     connect(visual, &StepVisual::endStepPlanHere, step_plan_helper_, &StepPlanHelper::trimStepPlan);
@@ -237,7 +257,7 @@ void StepPlanDisplay::displayIndex()
 // Clear the visuals by deleting their objects.
 void StepPlanDisplay::resetStepPlan()
 {
-  property_container_->removeChildren();
+  step_properties_container_->removeChildren();
   step_visuals_.clear();
   feedback_visuals_.clear();
 }
@@ -262,7 +282,8 @@ void StepPlanDisplay::displayStepPlan(const vigir_footstep_planning_msgs::StepPl
 
 void StepPlanDisplay::displaySteps(const std::vector<vigir_footstep_planning_msgs::Step>& steps, const Ogre::Vector3& frame_position, const Ogre::Quaternion& frame_orientation)
 {
-  property_container_->removeChildren();
+  if(!displayFeedback)
+    step_properties_container_->removeChildren();
 
   bool displIndex = display_index_->getBool();
   for (unsigned i = 0; i< steps.size(); i++)
@@ -278,7 +299,7 @@ void StepPlanDisplay::displaySteps(const std::vector<vigir_footstep_planning_msg
     {
       visual->displayIndex(displIndex);
 
-      StepProperty* step_property = new StepProperty(steps[i], property_container_);
+      StepProperty* step_property = new StepProperty(steps[i], step_properties_container_);
 
       if(i != 0)
       {
@@ -287,9 +308,9 @@ void StepPlanDisplay::displaySteps(const std::vector<vigir_footstep_planning_msg
       }
 
       makeStepVisualConnections(visual.get());
-      connect(visual.get(), SIGNAL(stepEdited(vigir_footstep_planning_msgs::EditStep)), step_property, SLOT(updateStep(vigir_footstep_planning_msgs::EditStep)));
-      connect(visual.get(), SIGNAL(selected(bool)), step_property, SLOT(setExpanded(bool)));
-      connect(step_property, SIGNAL(stepPoseChanged(Ogre::Vector3, Ogre::Quaternion)), visual.get(), SLOT(changePose(Ogre::Vector3, Ogre::Quaternion)));
+      connect(visual.get(), &StepVisual::stepChanged, step_property, static_cast<void (StepProperty::*)(EditStepMsg)>(&StepProperty::updateStep));
+      connect(visual.get(), &StepVisual::selected, step_property, &StepProperty::setExpanded);
+      connect(step_property, &StepProperty::stepPoseChanged, visual.get(), &StepVisual::editedPose);
 
     }
     if(!displayFeedback)
@@ -329,13 +350,11 @@ void StepPlanDisplay::addStartFeetMsg(vigir_footstep_planning_msgs::Feet start)
   Ogre::Quaternion orientation;
   if (! transformToFixedFrame(position, orientation, start.header))
     return; // failed
-
   addStartFeet(start, position, orientation);
 }
 
 void StepPlanDisplay::addStartFeet(const vigir_footstep_planning_msgs::Feet& start, const Ogre::Vector3& frame_position, const Ogre::Quaternion& frame_orientation)
 {
-
   if(! start_feet_)
   {
     start_feet_.reset(new FeetVisual(scene_manager_, scene_node_, START));
@@ -345,15 +364,15 @@ void StepPlanDisplay::addStartFeet(const vigir_footstep_planning_msgs::Feet& sta
     if(!step_plan_helper_->executeStepPlanActive())
     {
       start_feet_->initializeInteractiveMarker(im_server_feet);
-      connect(start_feet_.get(), SIGNAL(feetPoseChanged(Ogre::Vector3, Ogre::Quaternion)), this, SLOT(updateStartPose(Ogre::Vector3, Ogre::Quaternion)));
-      connect(panel_, SIGNAL(clearIM()), start_feet_.get(), SLOT(setButtonInteractiveMarker()));
+      connect(start_feet_.get(), &FeetVisual::feetPoseChanged, this, &StepPlanDisplay::setStartFeetPlannerFrameProperty);
+      connect(panel_, &FootstepPlanningPanel::clearIM, start_feet_.get(), &FeetVisual::setButtonInteractiveMarker);
     }
   }
   else
     start_feet_->updateFeetMsg(start, frame_position, frame_orientation);
 
   start_feet_->setVisible(start_property_container_->getBool());
-
+  addStartFeetRobotFrameProperties(start);
 }
 
 void StepPlanDisplay::addGoalFeet(vigir_footstep_planning_msgs::Feet goal)
@@ -370,14 +389,15 @@ void StepPlanDisplay::addGoalFeet(vigir_footstep_planning_msgs::Feet goal)
     goal_feet_->setFramePosition(position);
     goal_feet_->setFrameOrientation(orientation);
     goal_feet_->initializeInteractiveMarker(im_server_feet);
-    connect(goal_feet_.get(), SIGNAL(feetPoseChanged(Ogre::Vector3, Ogre::Quaternion)), this, SLOT(updateGoalPose(Ogre::Vector3, Ogre::Quaternion)));
-    connect(panel_, SIGNAL(clearIM()), goal_feet_.get(), SLOT(setButtonInteractiveMarker()));
-
+    connect(goal_feet_.get(), &FeetVisual::feetPoseChanged, this, &StepPlanDisplay::setGoalFeetPlannerFrameProperty);
+    connect(panel_, &FootstepPlanningPanel::clearIM, goal_feet_.get(), &FeetVisual::setButtonInteractiveMarker);
   }
   else
     goal_feet_->updateFeetMsg(goal, position, orientation);
 
   goal_feet_->setVisible(goal_property_container_->getBool());
+
+  addGoalFeetRobotFrameProperties(goal);
 }
 
 void StepPlanDisplay::setStartVisible()
@@ -399,7 +419,7 @@ void StepPlanDisplay::updateDisplay(int from, int to)
   for(int i=0; i < from; i++ )
   {
     step_visuals_[i]->setVisible(false);
-    StepProperty* property_i = static_cast<StepProperty*>(property_container_->childAt(i));
+    StepProperty* property_i = static_cast<StepProperty*>(step_properties_container_->childAt(i));
     if(property_i)
     {
       property_i->setHidden(true);
@@ -408,7 +428,7 @@ void StepPlanDisplay::updateDisplay(int from, int to)
   for (int i=from; i < step_visuals_.size(); i++)
   {
     step_visuals_[i]->setVisible(true);
-    StepProperty* property_i = static_cast<StepProperty*>(property_container_->childAt(i));
+    StepProperty* property_i = static_cast<StepProperty*>(step_properties_container_->childAt(i));
     if(property_i)
     {
       property_i->setHidden(false);
@@ -418,7 +438,7 @@ void StepPlanDisplay::updateDisplay(int from, int to)
   for(int i=to+1; i < step_visuals_.size(); i++ )
   {
     step_visuals_[i]->setVisible(false);
-    Property* property_i = property_container_->childAt(i);
+    Property* property_i = step_properties_container_->childAt(i);
     if(property_i != NULL)
     {
       property_i->setHidden(true);
@@ -503,7 +523,7 @@ void StepPlanDisplay::setStepValid(unsigned int index, bool valid)
   if(!visualize_cost_->getBool())
   {
     step_visuals_[index]->visualizeValid(valid);
-    StepProperty* step_property = static_cast<StepProperty*>(property_container_->childAt(index));
+    StepProperty* step_property = static_cast<StepProperty*>(step_properties_container_->childAt(index));
     step_property->setValid(valid);
   }
 }
@@ -536,7 +556,6 @@ void StepPlanDisplay::visualizeReplan(int end)
     }
   }
 }
-
 
 bool StepPlanDisplay::transformToFixedFrame(Ogre::Vector3& position, Ogre::Quaternion& orientation, const std_msgs::Header& header)
 {
@@ -590,88 +609,111 @@ void StepPlanDisplay::updateStepVisuals(vigir_footstep_planning_msgs::StepPlan u
   for (unsigned int i = 0; i < updated_step_plan.steps.size(); ++i)
   {
     step_visuals_[i]->updateStepMsg(updated_step_plan.steps[i]);
-    StepProperty* property_i = static_cast<StepProperty*>(property_container_->childAt(i));
+    StepProperty* property_i = static_cast<StepProperty*>(step_properties_container_->childAt(i));
     property_i->updateStep(updated_step_plan.steps[i]);
   }
 }
 
-void StepPlanDisplay::addGoalFeetProperties(vigir_footstep_planning_msgs::Feet goal_feet)
+void StepPlanDisplay::addGoalFeetRobotFrameProperties(vigir_footstep_planning_msgs::Feet goal_feet)
 {
-  goal_property_container_->removeChildren();
-
-  Ogre::Vector3 pos = Ogre::Vector3((goal_feet.left.pose.position.x + goal_feet.right.pose.position.x) / 2,
-                                    (goal_feet.left.pose.position.y + goal_feet.right.pose.position.y) / 2,
-                                    (goal_feet.left.pose.position.z + goal_feet.right.pose.position.z) / 2);
-  Ogre::Quaternion orient = Ogre::Quaternion(goal_feet.left.pose.orientation.w,
-                                             goal_feet.left.pose.orientation.x,
-                                             goal_feet.left.pose.orientation.y,
-                                             goal_feet.left.pose.orientation.z);
-  goal_position_property_ = new rviz::VectorProperty("Position",
-                                                     pos,
-                                                     "Middlepoint of goal feet",
-                                                     goal_property_container_,
-                                                     SLOT(goalPoseUpdated()),
-                                                     this);
-  goal_orientation_property_ = new rviz::QuaternionProperty("Orientation",
-                                                            orient,
-                                                            "Orientation of goal feet.",
-                                                            goal_property_container_,
-                                                            SLOT(goalPoseUpdated()),
-                                                            this);
-  goal_properties.clear();
-  // left foot:
-  rviz::Property* left_container = new Property("Left",
-                                                QVariant(),
-                                                "Left foot of goal configuration.",
-                                                goal_property_container_);
-  addFootProperty(goal_feet.left, left_container);
-  goal_properties.push_back(left_container);
-  // Right Foot:
-  rviz::Property* right_container = new Property("Right",
-                                                 QVariant(),
-                                                 "Right foot of goal configuration.",
-                                                 goal_property_container_);
-  addFootProperty(goal_feet.right, right_container);
-  goal_properties.push_back(right_container);
+  if(goal_properties.size() == 0)
+  {
+    // left foot:
+    rviz::Property* left_container = new Property("Left",
+                                                  QVariant(),
+                                                  "Left foot of goal configuration.",
+                                                  goal_property_container_);
+    addFootProperty(goal_feet.left, left_container);
+    goal_properties.push_back(left_container);
+    // Right Foot:
+    rviz::Property* right_container = new Property("Right",
+                                                   QVariant(),
+                                                   "Right foot of goal configuration.",
+                                                   goal_property_container_);
+    addFootProperty(goal_feet.right, right_container);
+    goal_properties.push_back(right_container);
+  }
+  else
+  {
+    updateFootProperty(goal_properties[0], goal_feet.left);
+    updateFootProperty(goal_properties[1], goal_feet.right);
+  }
 }
 
-void StepPlanDisplay::addStartFeetProperties(vigir_footstep_planning_msgs::Feet start_feet)
+void StepPlanDisplay::setGoalFeetPlannerFrameProperty(Ogre::Vector3 position, Ogre::Quaternion orientation)
 {
-  start_property_container_->removeChildren();
+  if(goal_position_property_ && goal_orientation_property_)
+  {
+    goal_position_property_->setVector(position);
+    goal_orientation_property_->setQuaternion(orientation);
+  }
+  else
+  {
+    goal_position_property_ = new rviz::VectorProperty("Position",
+                                                       position,
+                                                       "Middlepoint of goal feet in planner coordinates (relative to sole of foot)",
+                                                       goal_property_container_,
+                                                       SLOT(goalPoseUpdated()),
+                                                       this);
+    goal_orientation_property_ = new rviz::QuaternionProperty("Orientation",
+                                                              orientation,
+                                                              "Orientation of goal feet in planner coordinates",
+                                                              goal_property_container_,
+                                                              SLOT(goalPoseUpdated()),
+                                                              this);
+    goalPoseUpdated();
+  }
+}
 
-  Ogre::Vector3 pos = Ogre::Vector3((start_feet.left.pose.position.x + start_feet.right.pose.position.x) / 2,
-                                    (start_feet.left.pose.position.y + start_feet.right.pose.position.y) / 2,
-                                    (start_feet.left.pose.position.z + start_feet.right.pose.position.z) / 2);
-  Ogre::Quaternion orient = Ogre::Quaternion(start_feet.left.pose.orientation.w,
-                                             start_feet.left.pose.orientation.x,
-                                             start_feet.left.pose.orientation.y,
-                                             start_feet.left.pose.orientation.z);
-  start_position_property_ = new rviz::VectorProperty("Position",
-                                                      pos,
-                                                      "Middlepoint of goal feet",
-                                                      start_property_container_,
-                                                      SLOT(startPoseUpdated()), this);
-  start_orientation_property_ = new rviz::QuaternionProperty("Orientation",
-                                                             orient,
-                                                             "Orientation of goal feet.",
-                                                             start_property_container_,
-                                                             SLOT(startPoseUpdated()), this);
+void StepPlanDisplay::setStartFeetPlannerFrameProperty(Ogre::Vector3 position, Ogre::Quaternion orientation)
+{
+  if(start_position_property_ && start_orientation_property_)
+  {
+    start_position_property_->setVector(position);
+    start_orientation_property_->setQuaternion(orientation);
+  }
+  else
+  {
+    start_position_property_ = new rviz::VectorProperty("Position",
+                                                       position,
+                                                       "Middlepoint of start feet in planner coordinates",
+                                                       start_property_container_,
+                                                       SLOT(startPoseUpdated()),
+                                                       this);
+    start_orientation_property_ = new rviz::QuaternionProperty("Orientation",
+                                                              orientation,
+                                                              "Orientation of start feet in planner coordinates",
+                                                              start_property_container_,
+                                                              SLOT(startPoseUpdated()),
+                                                              this);
+    startPoseUpdated();
+  }
+}
 
-  start_properties.clear();
-  // left foot:
-  rviz::Property* left_container = new Property("Left",
-                                                QVariant(),
-                                                "Left foot of start configuration.",
-                                                start_property_container_);
-  addFootProperty(start_feet.left, left_container);
-  start_properties.push_back(left_container);
-  // Right Foot:
-  rviz::Property* right_container = new Property("Right",
-                                                 QVariant(),
-                                                 "Right foot of start configuration.",
-                                                 start_property_container_);
-  addFootProperty(start_feet.right, right_container);
-  start_properties.push_back(right_container);
+void StepPlanDisplay::addStartFeetRobotFrameProperties(vigir_footstep_planning_msgs::Feet start_feet)
+{
+  if(start_properties.size() == 0)
+  {
+    // left foot:
+    rviz::Property* left_container = new Property("Left",
+                                                  QVariant(),
+                                                  "Left foot of start configuration.",
+                                                  start_property_container_);
+    addFootProperty(start_feet.left, left_container);
+    start_properties.push_back(left_container);
+    // Right Foot:
+    rviz::Property* right_container = new Property("Right",
+                                                   QVariant(),
+                                                   "Right foot of start configuration.",
+                                                   start_property_container_);
+    addFootProperty(start_feet.right, right_container);
+    start_properties.push_back(right_container);
+  }
+  else
+  {
+    updateFootProperty(start_properties[0], start_feet.left);
+    updateFootProperty(start_properties[1], start_feet.right);
+  }
 }
 
 void StepPlanDisplay::addFootProperty(vigir_footstep_planning_msgs::Foot foot, rviz::Property* parent)
@@ -711,22 +753,6 @@ void StepPlanDisplay::startPoseUpdated()
 {
   if(feet_tool_)
     feet_tool_->setValidFeet(start_position_property_->getVector(), start_orientation_property_->getQuaternion(), frame_id_property_->getString().toStdString(), START);
-  else
-    ROS_ERROR("Please add Place Feet Tool");
-}
-
-void StepPlanDisplay::updateGoalPose(Ogre::Vector3 position, Ogre::Quaternion orientation)
-{
-  if(feet_tool_)
-    feet_tool_->setValidFeet(position, orientation, frame_id_property_->getString().toStdString(), GOAL);
-  else
-    ROS_ERROR("Please add Place Feet Tool");
-}
-
-void StepPlanDisplay::updateStartPose(Ogre::Vector3 position, Ogre::Quaternion orientation)
-{
-  if(feet_tool_)
-    feet_tool_->setValidFeet(position, orientation, frame_id_property_->getString().toStdString(), START);
   else
     ROS_ERROR("Please add Place Feet Tool");
 }
