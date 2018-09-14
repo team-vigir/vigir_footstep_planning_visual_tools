@@ -8,6 +8,7 @@
 
 #include <OgreSceneNode.h>
 #include <OgreSceneManager.h>
+#include <rviz/ogre_helpers/arrow.h>
 
 using namespace interactive_markers;
 
@@ -34,6 +35,14 @@ FeetVisual::FeetVisual( Ogre::SceneManager* scene_manager,
   feet_visuals_[LEFT].reset(new StepVisual(scene_manager, frame_node_, FootMsg::LEFT));
   feet_visuals_[RIGHT].reset(new StepVisual(scene_manager, frame_node_, FootMsg::RIGHT));
   setFeetPositioning();
+
+  show_dir_node_ = frame_node_->createChildSceneNode();
+  rviz::Arrow* arrow = new rviz::Arrow(scene_manager_, show_dir_node_,
+                                          /*shaft: length*/0.1f, /*diameter*/0.025f,
+                                          /*head: length*/0.05f, /*diameter*/0.05f);
+  arrow->setPosition(Ogre::Vector3(0.0f,0.0f,0.0f));
+  arrow->setDirection(Ogre::Vector3(1.0f,0.0f,0.0f));
+  arrow->setColor(0.8f,0.8f,0.8f,0.7f);
 }
 
 FeetVisual::~FeetVisual()
@@ -81,6 +90,8 @@ void FeetVisual::createFeetAt(const Ogre::Vector3& position, const Ogre::Quatern
 {
   position_ = position;
   orientation_ = orientation;
+  show_dir_node_->setPosition(position);
+  show_dir_node_->setOrientation(orientation);
 
   Ogre::Vector3 transformed_pos_left = pos_left;
   Ogre::Vector3 transformed_pos_right = pos_right;
@@ -107,7 +118,9 @@ void FeetVisual::setRobotPose(const Ogre::Vector3& position, const Ogre::Quatern
   // planner pose
   position_ = position;
   orientation_ = orientation;
-  //todo
+  show_dir_node_->setPosition(position);
+  show_dir_node_->setOrientation(orientation);
+
   Ogre::Vector3 transformed_pos_left = pos_left;
   Ogre::Vector3 transformed_pos_right = pos_right;
   computePositioning(transformed_pos_left, orientation);
@@ -117,8 +130,6 @@ void FeetVisual::setRobotPose(const Ogre::Vector3& position, const Ogre::Quatern
   feet_visuals_[LEFT]->setOrientation(orientation);
   feet_visuals_[RIGHT]->setPosition(position + transformed_pos_right);
   feet_visuals_[RIGHT]->setOrientation(orientation);
-
-
 
   geometry_msgs::Pose pose;
   getPoseMsg(pose, position+transformed_pos_left, orientation);
@@ -142,6 +153,8 @@ void FeetVisual::setPlannerPose(const FeetMsg& msg)
     Ogre::Vector3 right = getOgreVector(srv.response.feet.right.pose.position);
     position_ = 0.5*(left + right);
     orientation_ = getOgreQuaternion(srv.response.feet.left.pose.orientation);
+    show_dir_node_->setPosition(position_);
+    show_dir_node_->setOrientation(orientation_);
   }
   else
     ROS_ERROR("Failed to call service transform_feet_poses");

@@ -26,6 +26,8 @@ StepPlanHelper::StepPlanHelper(QObject *parent)
 
 StepPlanHelper::~StepPlanHelper()
 {
+  previous_sequences.clear();
+  previous_step_plans.clear();
   delete execute_step_plan_ac;
 }
 
@@ -349,7 +351,7 @@ void StepPlanHelper::executeStepPlanFeedbackCallback(const vigir_footstep_planni
 
 void StepPlanHelper::abortExecution()
 {
-  ROS_ERROR("abort execution");
+  //ROS_ERROR("abort execution");
   if(execute_step_plan_ac)
     execute_step_plan_ac->cancelAllGoals();
 }

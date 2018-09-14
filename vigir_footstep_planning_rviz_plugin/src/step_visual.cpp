@@ -38,6 +38,7 @@ StepVisual::StepVisual( Ogre::SceneManager* scene_manager,
   , display_index(false)
   , im_scale(0.35)
   , mesh_origin_(0.0f,0.0f,0.0f) // origin of frame
+  , visualize_valid(false)
 {
   // Frame node of the scene in which the foot is placed
   frame_node_ = parent_node->createChildSceneNode();
@@ -87,8 +88,11 @@ void StepVisual::setFootProperties()
   if(!nh.getParam("foot/size/x", im_scale))
     im_scale = 0.35;
   text_position_ = Ogre::Vector3::ZERO;
-  if(!nh.getParam("foot/size/z", text_position_.z))
+
+  if(!nh.getParam("foot/size/z", z))
      text_position_.z = 0.05;
+  else
+    text_position_.z = z + 0.05;
 }
 
 // CREATE VISUAL:
@@ -290,7 +294,7 @@ void StepVisual::editedPose(Ogre::Vector3 new_position, Ogre::Quaternion new_ori
 
 void StepVisual::visualizeValid(bool valid)
 {
-  if(!valid)
+  if(!valid && visualize_valid)
   {
     foot_->setColor(0.5 , 0.5 , 0.5 , 1);
   }
@@ -317,6 +321,11 @@ void StepVisual::visualizeCost(float max)
   foot_->setColor(1-ratio, 0.0, ratio, 1);
 }
 
+void StepVisual::setVisualizeValid(bool visualize)
+{
+  this->visualize_valid = visualize;
+  visualizeValid(current_step.valid && !current_step.colliding);
+}
 // Interactive Markers -----------------------------------------------------------------
 void StepVisual::initializeInteractiveMarker(InteractiveMarkerServer* marker_server)
 {
@@ -594,6 +603,8 @@ void StepVisual::resetInteractiveMarker()
     }
   }
 }
+
+
 
 
 } // end namespace vigir_footstep_planning_rviz_plugin

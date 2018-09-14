@@ -53,17 +53,35 @@ void PlanningRequestHandler::replanToIndex(int index)
   FootMsg replan_goal = current_step_plan.steps[index].foot;
   geometry_msgs::Pose pose = replan_goal.pose;
 
-  //compute shift for orientation
+  ros::NodeHandle nh;
   float x_shift= 0, y_shift = 0.093, z_shift = 0;
-  if(replan_goal.foot_index == FootMsg::LEFT)
+  float seperation, frame_x, frame_y, frame_z;
+  //compute shift for orientation
+  if (replan_goal.foot_index == FootMsg::LEFT
+      && nh.getParam("foot/separation", seperation)
+      && nh.getParam("foot/left/foot_frame/x", frame_x)
+      && nh.getParam("foot/left/foot_frame/y", frame_y)
+      && nh.getParam("foot/left/foot_frame/z", frame_z))
   {
-    y_shift *= -1;
+    x_shift = -frame_x;
+    y_shift = -frame_y + seperation/2;
+    z_shift = -frame_z;
+  }
+  if(replan_goal.foot_index == FootMsg::RIGHT
+     && nh.getParam("foot/separation", seperation)
+     && nh.getParam("foot/right/foot_frame/x", frame_x)
+     && nh.getParam("foot/right/foot_frame/y", frame_y)
+     && nh.getParam("foot/right/foot_frame/z", frame_z))
+  {
+    x_shift = -frame_x;
+    y_shift = -frame_y-seperation/2;
+    z_shift = -frame_z;
   }
 
   computeShift(x_shift, y_shift, z_shift, pose.orientation);
-  pose.position.x += x_shift;
-  pose.position.y += y_shift;
-  pose.position.z += z_shift;
+  pose.position.x -= x_shift;
+  pose.position.y -= y_shift;
+  pose.position.z -= z_shift;
   if(generate_feet_ac.isServerConnected())
   {
     vigir_footstep_planning_msgs::GenerateFeetPoseGoal goal;
@@ -85,7 +103,7 @@ void PlanningRequestHandler::replanToIndexCallback(const actionlib::SimpleClient
     request_->goal = result->feet;
 
     // replan
-    if(last_step_index > replan_goal_index)
+    if(last_step_index >= replan_goal_index)
     {
       last_step_index = 0;
     }
@@ -128,7 +146,7 @@ void PlanningRequestHandler::appendStepPlan(StepPlanMsg add)
   }
 
   ErrorStatusMsg error_status = current.appendStepPlan(add);
-  ROS_ERROR("deleted %i steps", i);
+//  ROS_ERROR("deleted %i steps", i);
 
   // add the end steps back to the replanned part
   if(replan_goal_index > last_step_index)

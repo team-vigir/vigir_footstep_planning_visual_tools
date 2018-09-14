@@ -83,6 +83,7 @@ public Q_SLOTS:
   void setInteractionMode(InteractionMode interaction_mode); // change default interaction mode invoked by panel
   void editedPose(Ogre::Vector3 new_position, Ogre::Quaternion new_orientation); // invoked by editing of Step Property
   void setButtonInteractiveMarker();
+  void setVisualizeValid(bool visualize);
 
 Q_SIGNALS:
   void stepChanged(vigir_footstep_planning_msgs::EditStep edit);
@@ -128,6 +129,7 @@ private:
 
   bool snap_to_valid;
   bool display_index;
+  bool visualize_valid;
   std::string frame_id_;
 
   // Step Properties:

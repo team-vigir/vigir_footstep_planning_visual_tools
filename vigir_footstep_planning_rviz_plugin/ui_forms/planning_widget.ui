@@ -67,6 +67,9 @@
           <height>30</height>
          </size>
         </property>
+        <property name="shortcut">
+         <string>T</string>
+        </property>
         <property name="checkable">
          <bool>true</bool>
         </property>
@@ -79,9 +82,6 @@
        <widget class="QCheckBox" name="sequenceCheckBox">
         <property name="text">
          <string>Sequence</string>
-        </property>
-        <property name="shortcut">
-         <string>S</string>
         </property>
        </widget>
       </item>
@@ -113,7 +113,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;step plan generation is started&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;(ctrl + return) step plan generation is started&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
          <string>Compute Step Plan</string>

@@ -96,7 +96,7 @@ private Q_SLOTS:
   void updateGoalPose(Ogre::Vector3 position, Ogre::Quaternion orientation);
   void updateStartPose(Ogre::Vector3 position, Ogre::Quaternion orientation);
   void resetGoal();
-
+  void updateVisualizeValid();
 
 Q_SIGNALS:
   void feedbackRequestedChanged(bool requested);
@@ -120,8 +120,8 @@ private:
   boost::circular_buffer<boost::shared_ptr<StepVisual> > step_visuals_; // Steps of current step plan
   boost::circular_buffer<boost::shared_ptr<StepVisual> > feedback_visuals_;
 
-  std::unique_ptr<FeetVisual> start_feet_;
-  std::unique_ptr<FeetVisual> goal_feet_;
+  FeetVisual* start_feet_;
+  FeetVisual* goal_feet_;
 
   vigir_footstep_planning_msgs::StepPlan current_step_plan;
 

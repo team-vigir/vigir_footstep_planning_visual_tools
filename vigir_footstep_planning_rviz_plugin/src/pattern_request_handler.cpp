@@ -145,7 +145,7 @@ void PatternRequestHandler::appendStepPlan(StepPlanMsg add)
 
   to_be_added.toMsg(add);
 
-  ROS_ERROR("deleted %i steps", i);
+// ROS_ERROR("deleted %i steps", i);
 
   ErrorStatusMsg error_status = current.appendStepPlan(add);
 

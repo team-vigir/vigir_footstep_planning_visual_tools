@@ -28,7 +28,6 @@ namespace interactive_markers
   class InteractiveMarkerServer;
 }
 
-
 namespace vigir_footstep_planning_rviz_plugin
 {
 class StepVisual;
@@ -94,6 +93,7 @@ private:
   boost::circular_buffer<boost::shared_ptr<StepVisual> > feet_visuals_;
   Ogre::SceneNode* frame_node_;
   Ogre::SceneManager* scene_manager_;
+  Ogre::SceneNode* show_dir_node_;
 
   // helper values for positioning the feet relative to given point
   Ogre::Vector3 pos_left; // position of left foot with center of feet as origin

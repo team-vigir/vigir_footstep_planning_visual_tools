@@ -53,23 +53,21 @@ Visualization Manager:
     - Class: footstep_planning_rviz_plugin/StepPlan
       Display Options:
         Display Feedback: true
-        Display Indices: false
+        Display Indices: true
         Visualize Step Cost: false
         Visualize invalid steps: true
       Enabled: true
       Frame ID: world
       Goal Feet:
-        Left: ~
         Orientation:
           W: 1
           X: 0
           Y: 0
           Z: 0
         Position:
-          X: 0.762230635
-          Y: 0.0421135426
+          X: 0
+          Y: 0
           Z: 0
-        Right: ~
         Value: true
       Name: StepPlan
       Start Feet:
@@ -91,11 +89,11 @@ Visualization Manager:
       Value: true
       panel::DisplayOptionsGroupBox: false
       panel::InteractionModeComboBox: 0
-      pattern::ClosingStepCheckBox: true
+      pattern::ClosingStepCheckBox: false
       pattern::DeltaZDoubleSpinBox: 0
       pattern::ExtraSeperationCheckBox: false
       pattern::MoreOptionsGroupBox: false
-      pattern::NOStepsSpinBox: 4
+      pattern::NOStepsSpinBox: 6
       pattern::Override3DCheckBox: false
       pattern::PitchSpinBox: 0
       pattern::RollSpinBox: 0
@@ -200,25 +198,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.58883727
+      Distance: 3.5768311
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.99529928
-        Y: -0.131483629
-        Z: 1.20092654
+        X: -0.0041943742
+        Y: -0.00459588319
+        Z: -0.00261749234
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 1.19979668
+      Pitch: 0.774797082
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.4604125
+      Yaw: 3.93538475
     Saved: ~
 Window Geometry:
   Displays:

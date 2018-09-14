@@ -35,6 +35,8 @@ StepPlanDisplay::StepPlanDisplay()
   , step_plan_helper_(0)
   , feet_tool_(0)
   , interact_tool_(0)
+  , start_feet_(0)
+  , goal_feet_(0)
 {
   qRegisterMetaType<vigir_footstep_planning_msgs::Step>("vigir_footstep_planning_msgs::Step");
 
@@ -45,9 +47,13 @@ StepPlanDisplay::~StepPlanDisplay()
 {
   step_visuals_.clear();
   feedback_visuals_.clear();
+  goal_properties.clear();
+  start_properties.clear();
   delete im_server_feet;
   delete im_server_steps;
   delete panel_;
+  delete goal_feet_;
+  delete start_feet_;
   if(step_plan_helper_)
     delete step_plan_helper_;
 }
@@ -108,7 +114,8 @@ void StepPlanDisplay::initializeDisplayProperties()
   visualize_valid_ = new rviz::BoolProperty("Visualize invalid steps",
                                             true,
                                             "Marks invalid steps gray",
-                                            visualization_properties_); // todo!
+                                            visualization_properties_,
+                                            SLOT(updateVisualizeValid()), this);
   visualize_cost_ = new rviz::BoolProperty("Visualize Step Cost",
                                            false,
                                            "Visualizes step cost, where red indicates high and blue low cost.",
@@ -293,7 +300,7 @@ void StepPlanDisplay::displaySteps(const std::vector<vigir_footstep_planning_msg
     visual->createByMessage( steps[i]);
     visual->setFramePosition( frame_position );
     visual->setFrameOrientation( frame_orientation );
-
+    visual->setVisualizeValid(visualize_valid_->getBool());
     //Interactive Marker:
     if(!displayFeedback)
     {
@@ -357,15 +364,15 @@ void StepPlanDisplay::addStartFeet(const vigir_footstep_planning_msgs::Feet& sta
 {
   if(! start_feet_)
   {
-    start_feet_.reset(new FeetVisual(scene_manager_, scene_node_, START));
+    start_feet_ = new FeetVisual(scene_manager_, scene_node_, START);
     start_feet_->createByMessage(start);
     start_feet_->setFramePosition(frame_position);
     start_feet_->setFrameOrientation(frame_orientation);
     if(!step_plan_helper_->executeStepPlanActive())
     {
       start_feet_->initializeInteractiveMarker(im_server_feet);
-      connect(start_feet_.get(), &FeetVisual::feetPoseChanged, this, &StepPlanDisplay::setStartFeetPlannerFrameProperty);
-      connect(panel_, &FootstepPlanningPanel::clearIM, start_feet_.get(), &FeetVisual::setButtonInteractiveMarker);
+      connect(start_feet_, &FeetVisual::feetPoseChanged, this, &StepPlanDisplay::setStartFeetPlannerFrameProperty);
+      connect(panel_, &FootstepPlanningPanel::clearIM, start_feet_, &FeetVisual::setButtonInteractiveMarker);
     }
   }
   else
@@ -384,13 +391,13 @@ void StepPlanDisplay::addGoalFeet(vigir_footstep_planning_msgs::Feet goal)
 
   if(!goal_feet_)
   {
-    goal_feet_.reset(new FeetVisual(scene_manager_, scene_node_, GOAL));
+    goal_feet_ = new FeetVisual(scene_manager_, scene_node_, GOAL);
     goal_feet_->createByMessage(goal);
     goal_feet_->setFramePosition(position);
     goal_feet_->setFrameOrientation(orientation);
     goal_feet_->initializeInteractiveMarker(im_server_feet);
-    connect(goal_feet_.get(), &FeetVisual::feetPoseChanged, this, &StepPlanDisplay::setGoalFeetPlannerFrameProperty);
-    connect(panel_, &FootstepPlanningPanel::clearIM, goal_feet_.get(), &FeetVisual::setButtonInteractiveMarker);
+    connect(goal_feet_, &FeetVisual::feetPoseChanged, this, &StepPlanDisplay::setGoalFeetPlannerFrameProperty);
+    connect(panel_, &FootstepPlanningPanel::clearIM, goal_feet_, &FeetVisual::setButtonInteractiveMarker);
   }
   else
     goal_feet_->updateFeetMsg(goal, position, orientation);
@@ -642,6 +649,7 @@ void StepPlanDisplay::addGoalFeetRobotFrameProperties(vigir_footstep_planning_ms
 
 void StepPlanDisplay::setGoalFeetPlannerFrameProperty(Ogre::Vector3 position, Ogre::Quaternion orientation)
 {
+
   if(goal_position_property_ && goal_orientation_property_)
   {
     goal_position_property_->setVector(position);
@@ -759,11 +767,22 @@ void StepPlanDisplay::startPoseUpdated()
 
 void StepPlanDisplay::resetGoal()
 {
-  goal_feet_.reset(NULL);
-  goal_property_container_->removeChildren();
+  if(goal_feet_)
+  {
+    delete goal_feet_;
+    goal_feet_ = 0;
+    goal_properties.clear();
+    goal_property_container_->removeChildren(2,2); //remove last two children
+  }
 }
 
-
+void StepPlanDisplay::updateVisualizeValid()
+{
+  for(int i=0; i < step_visuals_.size(); ++i)
+  {
+    step_visuals_[i]->setVisualizeValid(visualize_valid_->getBool());
+  }
+}
 }
 // end namespace vigir_footstep_planning_rviz_plugin
 

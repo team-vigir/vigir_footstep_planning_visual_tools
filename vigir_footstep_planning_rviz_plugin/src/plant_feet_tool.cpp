@@ -2,7 +2,6 @@
 #include <vigir_footstep_planning_rviz_plugin/feet_visual.h>
 #include <vigir_footstep_planning_rviz_plugin/common/ogre_visualization_msgs_functions.h>
 #include <geometry_msgs/PoseStamped.h>
-#include <rviz/ogre_helpers/arrow.h>
 
 #include <OgreSceneNode.h>
 #include <OgreSceneManager.h>
@@ -26,6 +25,7 @@ PlantFeetTool::PlantFeetTool()
 
 PlantFeetTool::~PlantFeetTool()
 {
+  scene_manager_->destroySceneNode(moving_feet_node_);
 }
 
 
@@ -37,14 +37,6 @@ void PlantFeetTool::onInitialize()
   moving_feet_node_ = scene_manager_->getRootSceneNode()->createChildSceneNode();
   moving_feet_ = new FeetVisual(scene_manager_, moving_feet_node_, GOAL);
   moving_feet_->createFeetAt(Ogre::Vector3(0,0,0), Ogre::Quaternion(1,0,0,0));
-
-  rviz::Arrow* show_dir = new rviz::Arrow(scene_manager_, moving_feet_node_,
-                                          /*shaft: length*/0.1f, /*diameter*/0.025f,
-                                          /*head: length*/0.05f, /*diameter*/0.05f);
-  show_dir->setPosition(Ogre::Vector3(0.0f,0.0f,0.0f));
-  show_dir->setDirection(Ogre::Vector3(1.0f,0.0f,0.0f));
-  show_dir->setColor(0.8f,0.8f,0.8f,0.5f);
-
   moving_feet_node_->setVisible( false );
 }
 
