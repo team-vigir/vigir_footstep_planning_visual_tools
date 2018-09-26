@@ -39,6 +39,7 @@ StepVisual::StepVisual( Ogre::SceneManager* scene_manager,
   , im_scale(0.35)
   , mesh_origin_(0.0f,0.0f,0.0f) // origin of frame
   , visualize_valid(false)
+  , visible_(false)
 {
   // Frame node of the scene in which the foot is placed
   frame_node_ = parent_node->createChildSceneNode();
@@ -113,6 +114,7 @@ void StepVisual::createByFootMsg(const vigir_footstep_planning_msgs::Foot& msg)
 void StepVisual::createVisualAt(const Ogre::Vector3& position, const Ogre::Quaternion& orientation)
 {
   createFootMesh();
+  visible_ = true;
 
   if(foot_index == FootMsg::LEFT)
   {
@@ -173,6 +175,7 @@ void StepVisual::createFootMesh()
 
 void StepVisual::setVisible(bool visible)
 {
+  visible_ = visible;
   frame_node_->setVisible(visible);
   if(index>=0)
     text_node_->setVisible(display_index && visible);
@@ -261,7 +264,7 @@ void StepVisual::updateStepMsg(const vigir_footstep_planning_msgs::Step updated_
   cost = updated_msg.cost;
   risk = updated_msg.risk;
   visualizeValid(!updated_msg.colliding && updated_msg.valid);
-  if(interactive_marker_server_)
+  if(interactive_marker_server_ && visible_)
     resetInteractiveMarker();
 }
 

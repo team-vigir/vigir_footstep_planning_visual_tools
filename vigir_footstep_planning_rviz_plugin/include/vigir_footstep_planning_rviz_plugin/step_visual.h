@@ -127,6 +127,7 @@ private:
 
   InteractionMode interaction_mode_;
 
+  bool visible_;
   bool snap_to_valid;
   bool display_index;
   bool visualize_valid;

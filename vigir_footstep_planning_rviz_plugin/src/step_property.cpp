@@ -53,7 +53,7 @@ void StepProperty::addStep(const StepMsg& step)
                                                 edit_step_property);
   position_shift_ = new rviz::VectorProperty("Position Shift",
                                              Ogre::Vector3::ZERO,
-                                             "Shift of step from original position.",
+                                             "Shift of step from reference position.",
                                              edit_step_property,
                                              SLOT(onShiftChanged()),
                                              this);
@@ -119,13 +119,13 @@ void StepProperty::updatePosition(const StepMsg & step)
 void StepProperty::updateStepProperty(const vigir_footstep_planning_msgs::Step &step)
 {
   is_valid_->setLevel(step.valid ? Ok : Warn);
-  is_valid_->setDescription(step.valid ? "Step reached from predecessor" : "Step not reached from predecessor");
+  is_valid_->setValue(step.valid ? "Step reached from predecessor" : "Step not reached from predecessor");
 
   cost_->setFloat(step.cost);
   risk_->setFloat(step.risk);
 
   colliding_->setLevel(step.colliding ? Warn : Ok);
-  colliding_->setDescription(step.colliding ? "Step is colliding" : "Step not colliding");
+  colliding_->setValue(step.colliding ? "Step is colliding" : "Step not colliding");
 
   updateStatus();
 }
@@ -135,7 +135,7 @@ void StepProperty::updateStepProperty(const vigir_footstep_planning_msgs::Step &
 void StepProperty::setValid(bool valid)
 {
   is_valid_->setLevel(valid ? Ok : Warn);
-  is_valid_->setDescription(valid ? "Step reached from predecessor" : "Step not reached from predecessor");
+  is_valid_->setValue(valid ? "Step reached from predecessor" : "Step not reached from predecessor");
 
   updateStatus();
 }

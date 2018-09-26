@@ -104,7 +104,7 @@ Visualization Manager:
       pattern::StepDistanceSpinBox: 0.10000000000000001
       pattern::TerrainModelCheckBox: false
       planning::AutoComputationCheckBox: false
-      planning::MaxNofStepsSpingBox: 99
+      planning::MaxNofStepsSpingBox: 0
       planning::MaxTimeSpinBox: 0
       planning::MoreOptionsGroupBox: false
       planning::PlanningModeComboBox: 1

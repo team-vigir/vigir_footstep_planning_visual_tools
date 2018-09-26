@@ -134,29 +134,29 @@ void StepPlanDisplay::initializeDisplayProperties()
                                                     this, SLOT(setGoalVisible()));
   goal_position_property_ = new rviz::VectorProperty("Position",
                                                      Ogre::Vector3::ZERO,
-                                                     "Middlepoint of goal feet in planner coordinates (relative to sole of foot)",
+                                                     "Middlepoint of goal feet on the ground",
                                                      goal_property_container_,
                                                      SLOT(goalPoseUpdated()),
                                                      this);
   goal_orientation_property_ = new rviz::QuaternionProperty("Orientation",
                                                             Ogre::Quaternion::IDENTITY,
-                                                            "Orientation of goal feet in planner coordinates",
+                                                            "Orientation of goal feet",
                                                             goal_property_container_,
                                                             SLOT(goalPoseUpdated()),
                                                             this);
   start_property_container_ = new rviz::BoolProperty("Start Feet",
                                                      false,
-                                                     "Properties of current starting pose.",
+                                                     "Properties of current starting pose",
                                                      this, SLOT(setStartVisible()));
   start_position_property_ = new rviz::VectorProperty("Position",
                                                      Ogre::Vector3::ZERO,
-                                                     "Middlepoint of start feet in planner coordinates",
+                                                     "Middlepoint of start feet on the ground",
                                                      start_property_container_,
                                                      SLOT(startPoseUpdated()),
                                                      this);
   start_orientation_property_ = new rviz::QuaternionProperty("Orientation",
                                                             Ogre::Quaternion::IDENTITY,
-                                                            "Orientation of start feet in planner coordinates",
+                                                            "Orientation of start feet",
                                                             start_property_container_,
                                                             SLOT(startPoseUpdated()),
                                                             this);
@@ -594,7 +594,6 @@ void StepPlanDisplay::visualizeStepCost()
   {
     for(unsigned int i = 0; i < step_visuals_.size(); ++i)
     {
-      // use parameter: default step cost: const_step_cost_estimator: step_cost: 0.1
       step_visuals_[i]->visualizeCost(0.3);
     }
   }
@@ -659,13 +658,13 @@ void StepPlanDisplay::setGoalFeetPlannerFrameProperty(Ogre::Vector3 position, Og
   {
     goal_position_property_ = new rviz::VectorProperty("Position",
                                                        position,
-                                                       "Middlepoint of goal feet in planner coordinates (relative to sole of foot)",
+                                                       "Middlepoint of goal feet on the ground.",
                                                        goal_property_container_,
                                                        SLOT(goalPoseUpdated()),
                                                        this);
     goal_orientation_property_ = new rviz::QuaternionProperty("Orientation",
                                                               orientation,
-                                                              "Orientation of goal feet in planner coordinates",
+                                                              "Orientation of goal feet.",
                                                               goal_property_container_,
                                                               SLOT(goalPoseUpdated()),
                                                               this);
@@ -684,13 +683,13 @@ void StepPlanDisplay::setStartFeetPlannerFrameProperty(Ogre::Vector3 position, O
   {
     start_position_property_ = new rviz::VectorProperty("Position",
                                                        position,
-                                                       "Middlepoint of start feet in planner coordinates",
+                                                       "Middlepoint of start feet on the ground.",
                                                        start_property_container_,
                                                        SLOT(startPoseUpdated()),
                                                        this);
     start_orientation_property_ = new rviz::QuaternionProperty("Orientation",
                                                               orientation,
-                                                              "Orientation of start feet in planner coordinates",
+                                                              "Orientation of start feet.",
                                                               start_property_container_,
                                                               SLOT(startPoseUpdated()),
                                                               this);
@@ -728,7 +727,7 @@ void StepPlanDisplay::addFootProperty(vigir_footstep_planning_msgs::Foot foot, r
 {
   rviz::VectorProperty* position = new rviz::VectorProperty("Position",
                                                             Ogre::Vector3(foot.pose.position.x, foot.pose.position.y, foot.pose.position.z),
-                                                            "Current position",
+                                                            "Current position (of the ancle)",
                                                             parent);
   rviz::QuaternionProperty* orientation = new rviz::QuaternionProperty("Orientation",
                                                                        Ogre::Quaternion(foot.pose.orientation.w, foot.pose.orientation.x, foot.pose.orientation.y, foot.pose.orientation.z),
