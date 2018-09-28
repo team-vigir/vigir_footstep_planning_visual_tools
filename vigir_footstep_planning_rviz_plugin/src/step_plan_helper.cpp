@@ -13,22 +13,25 @@ StepPlanHelper::StepPlanHelper(QObject *parent)
   , last_performed_step(-1)
   , last_action(GENERAL)
   , update_positions(false)
+  , execute_step_plan_ac(0)
 {
   std::string execute_name;
   ros::NodeHandle nh;
-  if(nh.getParam("execute_action_server", execute_name))
+  if(nh.getParam("rviz_plugin_actions/execute_action", execute_name))
+  {
     execute_step_plan_ac = new ExecuteStepPlanActionClient(execute_name, true);
+    connectToActionServer();
+  }
   else
-    ROS_ERROR("Could not find parameter \"execute_action_server\"");
-
-  connectToActionServer();
+    ROS_ERROR("Could not find parameter \"rviz_plugin_actions/execute_action\"");
 }
 
 StepPlanHelper::~StepPlanHelper()
 {
   previous_sequences.clear();
   previous_step_plans.clear();
-  delete execute_step_plan_ac;
+  if(execute_step_plan_ac)
+    delete execute_step_plan_ac;
 }
 
 // ----------- Action Server Connection --------------------------------------------

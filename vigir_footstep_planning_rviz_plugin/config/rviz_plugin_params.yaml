@@ -8,4 +8,7 @@ urdf_properties:
   foot_origin_left: {x: 0, y: 0.014, z: 0.0075}
   mesh_origin: {x: 0, y: 0, z: 0.0275}
   mesh_scale: {x: 0.001, y: 0.001, z: 0.001}
+rviz_plugin_actions:
+  execute_action: "/johnny5/step_control_module/execute_step_plan"
+
 
