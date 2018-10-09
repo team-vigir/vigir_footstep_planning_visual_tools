@@ -148,10 +148,10 @@
          <string/>
         </property>
         <property name="minimum">
-         <number>-180</number>
+         <number>-360</number>
         </property>
         <property name="maximum">
-         <number>180</number>
+         <number>360</number>
         </property>
        </widget>
       </item>
@@ -269,10 +269,10 @@
                <string> deg</string>
               </property>
               <property name="minimum">
-               <number>-180</number>
+               <number>-360</number>
               </property>
               <property name="maximum">
-               <number>180</number>
+               <number>360</number>
               </property>
              </widget>
             </item>
@@ -295,10 +295,10 @@
                <string> deg</string>
               </property>
               <property name="minimum">
-               <number>-180</number>
+               <number>-360</number>
               </property>
               <property name="maximum">
-               <number>180</number>
+               <number>360</number>
               </property>
              </widget>
             </item>

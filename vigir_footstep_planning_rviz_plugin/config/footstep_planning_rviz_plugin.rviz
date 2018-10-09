@@ -191,7 +191,7 @@ Visualization Manager:
     - Class: rviz/PublishPoint
       Single click: true
       Topic: /clicked_point
-    - Class: footstep_planning_rviz_plugin/PlantFeet
+    - Class: footstep_planning_rviz_plugin/PlaceFeet
     - Class: rviz/Interact
       Hide Inactive Objects: true
   Value: true

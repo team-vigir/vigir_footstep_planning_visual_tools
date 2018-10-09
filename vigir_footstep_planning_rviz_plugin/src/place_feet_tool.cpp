@@ -1,4 +1,4 @@
-#include <vigir_footstep_planning_rviz_plugin/plant_feet_tool.h>
+#include <vigir_footstep_planning_rviz_plugin/place_feet_tool.h>
 #include <vigir_footstep_planning_rviz_plugin/feet_visual.h>
 #include <vigir_footstep_planning_rviz_plugin/common/ogre_visualization_msgs_functions.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -14,7 +14,7 @@
 namespace vigir_footstep_planning_rviz_plugin
 {
 
-PlantFeetTool::PlantFeetTool()
+PlaceFeetTool::PlaceFeetTool()
   : moving_feet_node_( 0 )
   , mode(GOAL_FEET)
   , moving_feet_(0)
@@ -23,13 +23,13 @@ PlantFeetTool::PlantFeetTool()
   robot_pose_publisher = nh.advertise<geometry_msgs::PoseStamped>("/robot_pose",1);
 }
 
-PlantFeetTool::~PlantFeetTool()
+PlaceFeetTool::~PlaceFeetTool()
 {
   scene_manager_->destroySceneNode(moving_feet_node_);
 }
 
 
-void PlantFeetTool::onInitialize()
+void PlaceFeetTool::onInitialize()
 {
 
   generate_feet_ac.waitForServer(ros::Duration(1,0));
@@ -41,7 +41,7 @@ void PlantFeetTool::onInitialize()
 }
 
 
-void PlantFeetTool::activate()
+void PlaceFeetTool::activate()
 {
   if( moving_feet_node_ )
   {
@@ -49,7 +49,7 @@ void PlantFeetTool::activate()
   }
 }
 
-void PlantFeetTool::deactivate()
+void PlaceFeetTool::deactivate()
 {
   if( moving_feet_node_ )
   {
@@ -57,7 +57,7 @@ void PlantFeetTool::deactivate()
   }
 }
 
-int PlantFeetTool::processMouseEvent( rviz::ViewportMouseEvent& event )
+int PlaceFeetTool::processMouseEvent( rviz::ViewportMouseEvent& event )
 {
   if( !moving_feet_node_ )
   {
@@ -84,7 +84,7 @@ int PlantFeetTool::processMouseEvent( rviz::ViewportMouseEvent& event )
   return Render;
 }
 
-int PlantFeetTool::processKeyEvent(QKeyEvent *event, rviz::RenderPanel *panel)
+int PlaceFeetTool::processKeyEvent(QKeyEvent *event, rviz::RenderPanel *panel)
 {
   if(event->key()==Qt::Key_A)
   {
@@ -97,12 +97,12 @@ int PlantFeetTool::processKeyEvent(QKeyEvent *event, rviz::RenderPanel *panel)
   return Render;
 }
 
-void PlantFeetTool::setMode(PlantFeetMode mode)
+void PlaceFeetTool::setMode(PlaceFeetMode mode)
 {
   this->mode = mode;
 }
 
-void PlantFeetTool::setValidFeet(Ogre::Vector3 position, Ogre::Quaternion orientation, std::string frame_id, FeetType type)
+void PlaceFeetTool::setValidFeet(Ogre::Vector3 position, Ogre::Quaternion orientation, std::string frame_id, FeetType type)
 {
   geometry_msgs::Pose pose;
   getPoseMsg(pose, position, orientation);
@@ -116,18 +116,18 @@ void PlantFeetTool::setValidFeet(Ogre::Vector3 position, Ogre::Quaternion orient
     goal.request.flags = vigir_footstep_planning_msgs::FeetPoseRequest::FLAG_3D;
     if(type==GOAL)
       generate_feet_ac.sendGoal(goal,
-                                boost::bind(&PlantFeetTool::setValidGoalCallback, this, _1, _2),
+                                boost::bind(&PlaceFeetTool::setValidGoalCallback, this, _1, _2),
                                 GenerateFeetPoseActionClient::SimpleActiveCallback(),
                                 GenerateFeetPoseActionClient::SimpleFeedbackCallback());
     if(type==START)
       generate_feet_ac.sendGoal(goal,
-                                boost::bind(&PlantFeetTool::setValidStartCallback, this, _1, _2),
+                                boost::bind(&PlaceFeetTool::setValidStartCallback, this, _1, _2),
                                 GenerateFeetPoseActionClient::SimpleActiveCallback(),
                                 GenerateFeetPoseActionClient::SimpleFeedbackCallback());
   }
 }
 
-void PlantFeetTool::setValidGoalCallback(const actionlib::SimpleClientGoalState& state, const GenerateFeetPoseResult& result)
+void PlaceFeetTool::setValidGoalCallback(const actionlib::SimpleClientGoalState& state, const GenerateFeetPoseResult& result)
 {
   if(result->status.error == ErrorStatusMsg::NO_ERROR)
   {
@@ -135,7 +135,7 @@ void PlantFeetTool::setValidGoalCallback(const actionlib::SimpleClientGoalState&
   }
 }
 
-void PlantFeetTool::setValidStartCallback(const actionlib::SimpleClientGoalState& state, const GenerateFeetPoseResult& result)
+void PlaceFeetTool::setValidStartCallback(const actionlib::SimpleClientGoalState& state, const GenerateFeetPoseResult& result)
 {
   if(result->status.error == ErrorStatusMsg::NO_ERROR && state.isDone())
   {
@@ -157,7 +157,7 @@ void PlantFeetTool::setValidStartCallback(const actionlib::SimpleClientGoalState
   }
 }
 
-void PlantFeetTool::setRobotPose(const Ogre::Vector3& position, const Ogre::Quaternion& orientation, const std::string& frame_id)
+void PlaceFeetTool::setRobotPose(const Ogre::Vector3& position, const Ogre::Quaternion& orientation, const std::string& frame_id)
 {
   geometry_msgs::PoseStamped robot_pose;
   robot_pose.header.stamp = ros::Time::now();
@@ -174,4 +174,4 @@ void PlantFeetTool::setRobotPose(const Ogre::Vector3& position, const Ogre::Quat
 } // end namespace vigir_footstep_planning_rviz_plugin
 
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(vigir_footstep_planning_rviz_plugin::PlantFeetTool,rviz::Tool )
+PLUGINLIB_EXPORT_CLASS(vigir_footstep_planning_rviz_plugin::PlaceFeetTool,rviz::Tool )

@@ -27,78 +27,80 @@
 //=================================================================================================
 
 
-#ifndef PROPERTY_WIDGET_H
-#define PROPERTY_WIDGET_H
+#ifndef PLACE_FEET_TOOL_H
+#define PLACE_FEET_TOOL_H
 
 #ifndef Q_MOC_RUN
-#include <rviz/properties/status_property.h>
+
+#include <rviz/tool.h>
+#include <QKeyEvent>
+#include <actionlib/client/simple_action_client.h>
 #include <vigir_footstep_planning_rviz_plugin/common/common.h>
 #include <OgreVector3.h>
 #include <OgreQuaternion.h>
+
 #endif
+
+namespace Ogre
+{
+class SceneNode;
+}
 
 namespace rviz
 {
-class VectorProperty;
-class QuaternionProperty;
-class FloatProperty;
+class ViewportMouseEvent;
+class RenderPanel;
 }
+
+typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::GenerateFeetPoseAction> GenerateFeetPoseActionClient;
+typedef vigir_footstep_planning_msgs::GenerateFeetPoseResultConstPtr GenerateFeetPoseResult;
 
 namespace vigir_footstep_planning_rviz_plugin
 {
-class StepProperty : public rviz::StatusProperty
-{
-    Q_OBJECT
-public:
-    StepProperty(const vigir_footstep_planning_msgs::Step & step,
-                   Property *  	parent = 0
-                   /*const char *  	changed_slot = 0,
-                   QObject *  	receiver = 0 */
-                   );
-    StepProperty();
-    ~StepProperty();
 
-    void addStep(const vigir_footstep_planning_msgs::Step& step);
-    void updateStep(vigir_footstep_planning_msgs::Step updated_step);
-    void setValid(bool valid);
-    void setVisible(bool visible);
+class FeetVisual;
+
+// - Tool handling first placing of a pair of feet (either goal (mode=GOAL_FEET) or start (mode=START_FEET)
+// - Generating of valid feet message for given position & orientation
+class PlaceFeetTool: public rviz::Tool
+{
+  Q_OBJECT
+public:// A tool to place a pair of feet representing the goal pose of a step plan
+  PlaceFeetTool();
+  ~PlaceFeetTool();
+
+  virtual void onInitialize();
+
+  virtual void activate();
+  virtual void deactivate();
+
+  virtual int processMouseEvent( rviz::ViewportMouseEvent& event );
+  virtual int processKeyEvent (QKeyEvent *event, rviz::RenderPanel *panel);
+
+  void setMode(PlaceFeetMode mode);
 
 public Q_SLOTS:
-    void updateStep(vigir_footstep_planning_msgs::EditStep edit_step);
-    void setExpanded(bool expanded);
-private Q_SLOTS:
-    void onPoseEdited();
-    void onShiftChanged();
-    void updateStatus();
+  void setValidFeet(Ogre::Vector3 position, Ogre::Quaternion orientation, std::string frame_id, FeetType type);
 
 Q_SIGNALS:
-    void stepPoseChanged(Ogre::Vector3 position, Ogre::Quaternion orientation);
+  void newStartPose(vigir_footstep_planning_msgs::Feet goal_feet);
+  void newGoalPose(vigir_footstep_planning_msgs::Feet start_feet);
 
 private:
-    void addStepProperties(const vigir_footstep_planning_msgs::Step& step);
-    void updateStepProperty(const vigir_footstep_planning_msgs::Step& step);
-    void updatePosition(const vigir_footstep_planning_msgs::Step& step);
+  void setValidGoalCallback(const actionlib::SimpleClientGoalState& state, const GenerateFeetPoseResult& result);
+  void setValidStartCallback(const actionlib::SimpleClientGoalState& state, const GenerateFeetPoseResult& result);
+  void setRobotPose(const Ogre::Vector3& position, const Ogre::Quaternion& orientation, const std::string& frame_id);
 
+  ros::NodeHandle nh;
+  ros::Publisher robot_pose_publisher;
+  GenerateFeetPoseActionClient generate_feet_ac;
 
-    rviz::VectorProperty* position_;
-    rviz::QuaternionProperty* orientation_;
+  Ogre::SceneNode* moving_feet_node_;
+  FeetVisual* moving_feet_;
 
-    rviz::Property* edit_step_property;
-    rviz::VectorProperty* original_position_;
-    rviz::VectorProperty* position_shift_;
-
-    rviz::Property* property_container_;
-    rviz::StatusProperty* is_valid_;
-    rviz::FloatProperty* cost_;
-    rviz::FloatProperty* risk_;
-    rviz::StatusProperty* colliding_;
-    rviz::FloatProperty* sway_duration_;
-    rviz::FloatProperty* step_duration_;
-    rviz::FloatProperty* swing_height_;
-
-    bool internal_update; //to not emit poseChanged when values are set
-    bool selected; //is selected = in manipulation mode
+  PlaceFeetMode mode;
 };
 
 } // end namespace vigir_footstep_planning_rviz_plugin
-#endif // PROPERTY_WIDGET_H
+
+#endif // PLACE_FEET_TOOL_H

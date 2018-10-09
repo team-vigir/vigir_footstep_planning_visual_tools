@@ -142,7 +142,7 @@ qt5_wrap_ui(UIS_HDRS ui_forms/planning_widget.ui)
 
 qt5_wrap_cpp(MOC_FILES
   include/${PROJECT_NAME}/step_plan_display.h
-  include/${PROJECT_NAME}/plant_feet_tool.h
+  include/${PROJECT_NAME}/place_feet_tool.h
   include/${PROJECT_NAME}/footstep_planning_panel.h
   include/${PROJECT_NAME}/request_handler_base.h
   include/${PROJECT_NAME}/planning_request_handler.h
@@ -160,7 +160,7 @@ qt5_wrap_cpp(MOC_FILES
 set(HEADERS
   include/${PROJECT_NAME}/step_plan_display.h
   include/${PROJECT_NAME}/step_visual.h
-  include/${PROJECT_NAME}/plant_feet_tool.h
+  include/${PROJECT_NAME}/place_feet_tool.h
   include/${PROJECT_NAME}/footstep_planning_panel.h
   include/${PROJECT_NAME}/request_handler_base.h
   include/${PROJECT_NAME}/planning_request_handler.h
@@ -177,7 +177,7 @@ set(HEADERS
 set(SOURCES
   src/step_plan_display.cpp
   src/step_visual.cpp
-  src/plant_feet_tool.cpp
+  src/place_feet_tool.cpp
   src/footstep_planning_panel.cpp
   src/request_handler_base.cpp
   src/planning_request_handler.cpp

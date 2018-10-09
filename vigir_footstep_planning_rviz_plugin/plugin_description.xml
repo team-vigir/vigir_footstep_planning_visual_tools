@@ -3,21 +3,21 @@
          type="vigir_footstep_planning_rviz_plugin::StepPlanDisplay"
          base_class_type="rviz::Display">
     <description>
-      Create and display Step Plans. 
+      Create, edit and display step plans. 
     </description>
   </class>
-  <class name="footstep_planning_rviz_plugin/PlantFeet"
-         type="vigir_footstep_planning_rviz_plugin::PlantFeetTool"
+  <class name="footstep_planning_rviz_plugin/PlaceFeet"
+         type="vigir_footstep_planning_rviz_plugin::PlaceFeetTool"
          base_class_type="rviz::Tool">
     <description>
-      Position a pair of feet on the ground plane.
+      Place a pair of feet on the ground plane.
     </description>
   </class>
   <class name="footstep_planning_rviz_plugin/PropertyWidget"
 	 type="vigir_footstep_planning_rviz_plugin::StepProperty"
 	 base_class_type="rviz::StatusProperty" >
     <description>
-      Lists properties of current step plan.
+      Lists properties of a step.
     </description>
   </class>
 </library>

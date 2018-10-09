@@ -5,7 +5,7 @@
 #include <vigir_footstep_planning_rviz_plugin/footstep_planning_panel.h>
 #include <vigir_footstep_planning_rviz_plugin/step_plan_helper.h>
 #include <vigir_footstep_planning_rviz_plugin/feet_visual.h>
-#include <vigir_footstep_planning_rviz_plugin/plant_feet_tool.h>
+#include <vigir_footstep_planning_rviz_plugin/place_feet_tool.h>
 
 #include <OGRE/OgreSceneNode.h>
 #include <OGRE/OgreSceneManager.h>
@@ -164,10 +164,10 @@ void StepPlanDisplay::initializeDisplayProperties()
 
 void StepPlanDisplay::makeFeetToolConnections()
 {
-  connect(feet_tool_, &PlantFeetTool::newStartPose, this, &StepPlanDisplay::addStartFeetMsg);
-  connect(feet_tool_, &PlantFeetTool::newGoalPose, this, &StepPlanDisplay::addGoalFeet);
+  connect(feet_tool_, &PlaceFeetTool::newStartPose, this, &StepPlanDisplay::addStartFeetMsg);
+  connect(feet_tool_, &PlaceFeetTool::newGoalPose, this, &StepPlanDisplay::addGoalFeet);
   // pass goal pose to request handler
-  connect(feet_tool_, &PlantFeetTool::newGoalPose, panel_, &FootstepPlanningPanel::updateGoalPose);
+  connect(feet_tool_, &PlaceFeetTool::newGoalPose, panel_, &FootstepPlanningPanel::updateGoalPose);
 }
 
 void StepPlanDisplay::makePanelConnections()
@@ -328,11 +328,11 @@ void StepPlanDisplay::displaySteps(const std::vector<vigir_footstep_planning_msg
   }
 }
 
-void StepPlanDisplay::activateFeetTool(PlantFeetMode mode, bool active)
+void StepPlanDisplay::activateFeetTool(PlaceFeetMode mode, bool active)
 {
   if(!feet_tool_)
   {
-    ROS_ERROR("Please add Interaction Tool");
+    ROS_ERROR("Please add Place Feet Tool");
     return;
   }
 
@@ -514,9 +514,9 @@ void StepPlanDisplay::save( rviz::Config config ) const
 void StepPlanDisplay::checkTool(rviz::Tool* tool)
 {
   // ROS_INFO("%s", tool->getName().toStdString().c_str());
-  if(tool->getName()=="Plant Feet")
+  if(tool->getName()=="Place Feet")
   {
-    feet_tool_ = static_cast<PlantFeetTool*>(tool);
+    feet_tool_ = static_cast<PlaceFeetTool*>(tool);
     makeFeetToolConnections();
   }
   if(tool->getName() == "Interact")

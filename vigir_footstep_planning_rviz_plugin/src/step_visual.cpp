@@ -1,7 +1,3 @@
-// ------------------------------
-// ACHTUNG!!!!
-// Ogre::Quaternion Konstruktor: Quaternion(W, x, y, z)
-//
 #include <vigir_footstep_planning_rviz_plugin/step_visual.h>
 #include <vigir_footstep_planning_rviz_plugin/common/ogre_visualization_msgs_functions.h>
 #include <vigir_footstep_planning_rviz_plugin/common/interactive_marker_functions.h>
@@ -37,7 +33,7 @@ StepVisual::StepVisual( Ogre::SceneManager* scene_manager,
   , snap_to_valid(true)
   , display_index(false)
   , im_scale(0.35)
-  , mesh_origin_(0.0f,0.0f,0.0f) // origin of frame
+  , mesh_origin_(0.0f,0.0f,0.0f)
   , visualize_valid(false)
   , visible_(false)
 {
@@ -68,18 +64,18 @@ void StepVisual::setFootProperties()
 {
   ros::NodeHandle nh;
   float x, y, z;
-  if(nh.getParam("urdf_properties/mesh_origin/x", x)
-       && nh.getParam("urdf_properties/mesh_origin/y", y)
-       && nh.getParam("urdf_properties/mesh_origin/z", z))
+  if(nh.getParam("foot_mesh/origin/x", x)
+       && nh.getParam("foot_mesh/origin/y", y)
+       && nh.getParam("foot_mesh/origin/z", z))
   {
     mesh_origin_ = Ogre::Vector3(x, y, z);
   }
   else
     ROS_ERROR("Could not retrieve origin of foot mesh");
 
-  if(nh.getParam("urdf_properties/mesh_scale/x", x)
-       && nh.getParam("urdf_properties/mesh_scale/y", y)
-       && nh.getParam("urdf_properties/mesh_scale/z", z))
+  if(nh.getParam("foot_mesh/scale/x", x)
+       && nh.getParam("foot_mesh/scale/y", y)
+       && nh.getParam("foot_mesh/scale/z", z))
   {
     scale_ = Ogre::Vector3(x,y,z);
   }
@@ -134,7 +130,7 @@ void StepVisual::createFootMesh()
   // 1) Get Mesh resource:
   ros::NodeHandle nh;
   std::string mesh_dir = "";
-  if (!(nh.getParam("meshes_path", mesh_dir)))
+  if (!(nh.getParam("foot_mesh/dir", mesh_dir)))
     ROS_ERROR("Could not retrieve mesh directory");
 
   std::string foot_mesh = "";
@@ -202,20 +198,7 @@ void StepVisual::setPosition( const Ogre::Vector3& position)
   }
   foot_node_->setPosition(position);
 }
-/*
-void StepVisual::setPose(const geometry_msgs::Pose& pose)
-{
-  Ogre::Quaternion current_orientation = getOgreQuaternion(pose.orientation);
-  Ogre::Matrix3 rotMat;
-  current_orientation.ToRotationMatrix(rotMat);
-  Ogre::Vector3 current_frame_origin = rotMat*frame_origin_;
-  setPosition(getOgreVector(pose.position));
-  setOrientation(current_orientation);
-  current_frame_origin += getOgreVector(pose.position);
-  //ROS_ERROR("position msg: %f, %f, %f", current_frame_origin.x, current_frame_origin.y, current_frame_origin.z);
 
-}
-*/
 void StepVisual::setOrientation( const Ogre::Quaternion& orientation)
 {
   foot_node_->setOrientation(orientation);
@@ -606,8 +589,6 @@ void StepVisual::resetInteractiveMarker()
     }
   }
 }
-
-
 
 
 } // end namespace vigir_footstep_planning_rviz_plugin
